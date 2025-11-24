@@ -1,4 +1,5 @@
 import React from 'react';
+import { useHabits } from '../hooks/useHabits';
 
 export default function HUD() {
   return (
