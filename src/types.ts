@@ -1,15 +1,16 @@
 // src/types.ts
+export type HabitCategory = 'exercise' | 'mind' | 'health' | 'productivity';
 export type HabitDifficulty = 'easy' | 'medium' | 'hard';
 export type HabitFrequency = 'daily' | 'weekly';
 
 export interface Habit {
   id: string;
   name: string;
-  frequency: HabitFrequency;
-  lastCompleted: string | null;
-  streak: number;
+  category: HabitCategory;
   difficulty: HabitDifficulty;
-  completedToday?: boolean;
+  frequency: HabitFrequency;
+  streak: number;
+  lastCompleted: string | null;
 }
 
 export interface UserState {

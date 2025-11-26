@@ -1,6 +1,15 @@
 // src/hooks/useHabits.ts
 import { useState, useEffect } from 'react';
-import type { Habit, UserState } from '../types';
+import type { Habit, UserState, HabitCategory } from '../types';
+import { db, auth } from '../lib/firebase';
+import { 
+  doc, 
+  getDoc, 
+  setDoc,
+} from 'firebase/firestore';
+import { 
+  onAuthStateChanged,
+} from 'firebase/auth';
 
 const STORAGE_KEY = 'arkan_user_v1';
 
@@ -12,22 +21,55 @@ const XP_BY_DIFFICULTY = {
 } as const;
 
 const getDefaultHabits = (): Habit[] => [
-  {
-    id: 'read-10min',
-    name: 'Leer 10 min',
-    frequency: 'daily',
-    difficulty: 'easy',
-    streak: 0,
-    lastCompleted: null,
-  },
-  {
-    id: 'push-ups-100',
-    name: 'Hacer 100 flexiones',
-    frequency: 'daily',
-    difficulty: 'hard',
-    streak: 0,
-    lastCompleted: null,
-  },
+  // ✅ Ejercicio
+  { id: 'push-ups-100', 
+    name: '100 flexiones', 
+    category: 'exercise', 
+    difficulty: 'hard', 
+    frequency: 'daily', 
+    streak: 0, 
+    lastCompleted: null },
+  { id: 'run-5km', 
+    name: 'Correr 5 km', 
+    category: 'exercise', 
+    difficulty: 'hard', 
+    frequency: 'daily', 
+    streak: 0, 
+    lastCompleted: null },
+
+  // ✅ Mente
+  { id: 'read-10min', 
+    name: 'Leer 10 min', 
+    category: 'mind', 
+    difficulty: 'easy', 
+    frequency: 'daily', 
+    streak: 0, 
+    lastCompleted: null },
+  { id: 'meditate-5min', 
+    name: 'Meditar 5 min', 
+    category: 'mind', 
+    difficulty: 'medium', 
+    frequency: 'daily', 
+    streak: 0, 
+    lastCompleted: null },
+
+  // ✅ Salud
+  { id: 'water-2l', 
+    name: 'Beber 2L agua', 
+    category: 'health', 
+    difficulty: 'easy', 
+    frequency: 'daily', 
+    streak: 0, 
+    lastCompleted: null },
+
+  // ✅ Productividad
+  { id: 'plan-day', 
+    name: 'Planificar día', 
+    category: 'productivity', 
+    difficulty: 'medium', 
+    frequency: 'daily', 
+    streak: 0, 
+    lastCompleted: null },
 ];
 
 export const useHabits = () => {
@@ -36,8 +78,83 @@ export const useHabits = () => {
     habits: getDefaultHabits(),
   });
 
-  // 🔁 Cargar desde localStorage
+  // 🔁 Cargar datos al iniciar
   useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        // Auth falló → usar localStorage
+        loadFromLocalStorage();
+      } else {
+        // Auth exitosa → cargar desde Firestore
+        await loadFromFirestore(user.uid);
+      }
+    });
+    
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/firebase-messaging-sw.js')
+        .then(registration => {
+          console.log('SW registered:', registration);
+        });
+    }
+    return () => unsubscribe();
+  }, []);
+
+  // 💾 Guardar estado
+  const saveState = async (newState: UserState) => {
+    setState(newState);
+    try {
+      const user = auth.currentUser;
+      if (user) {
+        // Guardar en Firestore
+        await setDoc(doc(db, 'users', user.uid), {
+          ...newState,
+          updatedAt: new Date(),
+        });
+      } else {
+        // Fallback a localStorage
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(newState));
+      }
+    } catch (e) {
+      console.error('Failed to save state', e);
+      // Si Firestore falla, guardar en localStorage
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(newState));
+    }
+  };
+
+  // 📥 Cargar desde Firestore
+  const loadFromFirestore = async (uid: string) => {
+    try {
+      const docRef = doc(db, 'users', uid);
+      const docSnap = await getDoc(docRef);
+      
+      if (docSnap.exists()) {
+        const data = docSnap.data() as UserState;
+        const savedHabits = data.habits || [];
+        const defaultHabits = getDefaultHabits();
+
+        // 👇 Fusiona SIEMPRE: mantiene los datos guardados, pero añade nuevos hábitos por id
+        const mergedHabits = [...savedHabits];
+        defaultHabits.forEach((def) => {
+          if (!mergedHabits.some((h: any) => h.id === def.id)) {
+            mergedHabits.push(def);
+          }
+        });
+
+        setState({
+          totalXP: data.totalXP ?? 0,
+          habits: mergedHabits,
+        });
+      } else {
+        setState({ totalXP: 0, habits: getDefaultHabits() });
+      }
+    } catch (e) {
+      console.error('Firestore load failed', e);
+      loadFromLocalStorage(); // Fallback
+    }
+  };
+
+  // 📥 Cargar desde localStorage (fallback)
+  const loadFromLocalStorage = () => {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       try {
@@ -64,16 +181,6 @@ export const useHabits = () => {
     } else {
       // Si no hay nada guardado, usar defaults
       setState({ totalXP: 0, habits: getDefaultHabits() });
-    }
-  }, []);
-
-  // 💾 Guardar
-  const saveState = (newState: UserState) => {
-    setState(newState);
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(newState));
-    } catch (e) {
-      console.error('Failed to save state', e);
     }
   };
 
@@ -141,12 +248,26 @@ export const useHabits = () => {
   const readHabit = state.habits.find((h) => h.id === 'read-10min');
   const completedToday = readHabit?.lastCompleted === today;
 
+  // 🧭 Misiones diarias por categoría
+  const categories: HabitCategory[] = ['exercise', 'mind', 'health', 'productivity'];
+  const dailyMissions = categories.reduce((acc, category) => {
+    const pending = state.habits
+      .filter(h => h.category === category && h.lastCompleted !== today)
+      .sort((a, b) => 
+        ({ hard: 3, medium: 2, easy: 1 }[a.difficulty] - 
+         { hard: 3, medium: 2, easy: 1 }[b.difficulty])
+      );
+    acc[category] = pending[0] || null; // null si todos completados
+    return acc;
+  }, {} as Record<HabitCategory, Habit | null>);
+
   return {
     level: currentLevel,
     xpProgress,
     xpNeeded,
     progressPercent,
     habits: state.habits,
+    dailyMissions, // 👈 nuevo
     toggleHabit,
     completedToday,
   };
