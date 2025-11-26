@@ -90,7 +90,7 @@ export default function HUD() {
           justifyContent: 'center',
         }}>
           <img 
-            src="../src/assets/Arkan-Logo.png" 
+            src="Arkan-Logo.png" 
             alt="Arkan Protocol" 
             style={{ 
               width: '100%', 
