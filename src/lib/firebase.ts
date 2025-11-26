@@ -1,20 +1,17 @@
-// src/lib/firebase.ts
 import { initializeApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
-import { getMessaging } from 'firebase/messaging';
 
+// ⚠️ Usa Vite's env
 const firebaseConfig = {
-  apiKey: "AIzaSyAiqbGAzrMqXhR1zLVVU67o2KBK9aG-qMc",
-  authDomain: "arkan-protocol.firebaseapp.com",
-  projectId: "arkan-protocol",
-  storageBucket: "arkan-protocol.firebasestorage.app",
-  messagingSenderId: "789239543078",
-  appId: "1:789239543078:web:296ef44c23155820b73de7",
-  measurementId: "G-KCW2Y9TXVJ"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
 export const auth = getAuth(app);
-export const messaging = getMessaging(app);

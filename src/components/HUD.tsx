@@ -90,7 +90,7 @@ export default function HUD() {
           justifyContent: 'center',
         }}>
           <img 
-            src="/Arkan-Logo.png" 
+            src="../src/assets/Arkan-Logo.png" 
             alt="Arkan Protocol" 
             style={{ 
               width: '100%', 
@@ -185,7 +185,7 @@ export default function HUD() {
                   opacity: 0.8,
                   marginBottom: '6px',
                 }}>
-                  🎯 Misión diaria
+                 Misión diaria
                 </div>
                 <label style={{ display: 'flex', alignItems: 'center' }}>
                   <input
