@@ -1,123 +1,74 @@
 // src/hooks/useHabits.ts
 import { useState, useEffect } from 'react';
-import type { Habit, UserState, HabitCategory } from '../types';
+import type { 
+  Habit, 
+  UserState, 
+  HabitCategory,
+  InventoryItem, // 👈 nuevo
+} from '../types';
 import { db, auth } from '../lib/firebase';
 import { 
-  doc, 
-  getDoc, 
-  setDoc,
+  doc, getDoc, setDoc 
 } from 'firebase/firestore';
-import { 
-  onAuthStateChanged,
-} from 'firebase/auth';
-
-const STORAGE_KEY = 'arkan_user_v1';
-
-// 📊 XP por dificultad
-const XP_BY_DIFFICULTY = {
-  easy: 10,
-  medium: 25,
-  hard: 50,
-} as const;
-
-const getDefaultHabits = (): Habit[] => [
-  // ✅ Ejercicio
-  { id: 'push-ups-100', 
-    name: '100 flexiones', 
-    category: 'exercise', 
-    difficulty: 'hard', 
-    frequency: 'daily', 
-    streak: 0, 
-    lastCompleted: null },
-  { id: 'run-5km', 
-    name: 'Correr 5 km', 
-    category: 'exercise', 
-    difficulty: 'hard', 
-    frequency: 'daily', 
-    streak: 0, 
-    lastCompleted: null },
-
-  // ✅ Mente
-  { id: 'read-10min', 
-    name: 'Leer 10 min', 
-    category: 'mind', 
-    difficulty: 'easy', 
-    frequency: 'daily', 
-    streak: 0, 
-    lastCompleted: null },
-  { id: 'meditate-5min', 
-    name: 'Meditar 5 min', 
-    category: 'mind', 
-    difficulty: 'medium', 
-    frequency: 'daily', 
-    streak: 0, 
-    lastCompleted: null },
-
-  // ✅ Salud
-  { id: 'water-2l', 
-    name: 'Beber 2L agua', 
-    category: 'health', 
-    difficulty: 'easy', 
-    frequency: 'daily', 
-    streak: 0, 
-    lastCompleted: null },
-
-  // ✅ Productividad
-  { id: 'plan-day', 
-    name: 'Planificar día', 
-    category: 'productivity', 
-    difficulty: 'medium', 
-    frequency: 'daily', 
-    streak: 0, 
-    lastCompleted: null },
-];
+import { onAuthStateChanged } from 'firebase/auth';
+import {
+  XP_BY_DIFFICULTY,
+  ENERGY_COST,
+  ATTRIBUTE_BY_CATEGORY,
+  DEFAULT_HABITS,
+  STORAGE_KEY,
+  calculateLevel,
+  getXPToReachLevel,
+  mergeHabits,
+} from '../constants';
 
 export const useHabits = () => {
-  const [state, setState] = useState<UserState>({
+  // Estado inicial realista
+  const getInitialState = (): UserState => ({
     totalXP: 0,
-    habits: getDefaultHabits(),
+    habits: DEFAULT_HABITS,
+    level: 1,
+    // 🧠 Atributos iniciales (nivel 1 = 1 en todos)
+    attributes: {
+      condicionFisica: 1,
+      movilidad: 1,
+      salud: 1,
+      conocimiento: 1,
+      atencion: 1,
+      autocontrol: 1
+    },
+    energy: 85,   // Energía mental inicial
+    health: 95,   // Salud inicial
+    status: 'activo',
+    illnesses: [],
+    inventory: [], // 👈 nuevo
+    name: 'Jugador',
+    age: 25,
+    title: 'Aprendiz',
+    updatedAt: new Date().toISOString()
   });
 
-  // 🔁 Cargar datos al iniciar
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (!user) {
-        // Auth falló → usar localStorage
-        loadFromLocalStorage();
-      } else {
-        // Auth exitosa → cargar desde Firestore
-        await loadFromFirestore(user.uid);
-      }
-    });
-    
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/firebase-messaging-sw.js')
-        .then(registration => {
-          console.log('SW registered:', registration);
-        });
-    }
-    return () => unsubscribe();
-  }, []);
+  const [state, setState] = useState<UserState>(getInitialState());
 
-  // 💾 Guardar estado
-  const saveState = async (newState: UserState) => {
-    setState(newState);
+  // 📥 Cargar desde localStorage
+  const loadFromLocalStorage = () => {
     try {
-      const user = auth.currentUser;
-      if (user) {
-        // Guardar en Firestore
-        await setDoc(doc(db, 'users', user.uid), {
-          ...newState,
-          updatedAt: new Date(),
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        setState({
+          ...getInitialState(),
+          ...parsed,
+          habits: mergeHabits(parsed.habits || [], DEFAULT_HABITS),
+          attributes: { ...getInitialState().attributes, ...parsed.attributes },
+          inventory: parsed.inventory || [], // 👈 nuevo
         });
       } else {
-        // Fallback a localStorage
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(newState));
+        setState(getInitialState());
       }
     } catch (e) {
-      console.error('Failed to save state', e);
-      // Si Firestore falla, guardar en localStorage
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(newState));
+      console.warn('Failed to parse state', e);
+      setState(getInitialState());
     }
   };
 
@@ -129,146 +80,192 @@ export const useHabits = () => {
       
       if (docSnap.exists()) {
         const data = docSnap.data() as UserState;
-        const savedHabits = data.habits || [];
-        const defaultHabits = getDefaultHabits();
-
-        // 👇 Fusiona SIEMPRE: mantiene los datos guardados, pero añade nuevos hábitos por id
-        const mergedHabits = [...savedHabits];
-        defaultHabits.forEach((def) => {
-          if (!mergedHabits.some((h: any) => h.id === def.id)) {
-            mergedHabits.push(def);
-          }
-        });
-
+        // 👇 Fusionar con defaults para nuevos campos
         setState({
-          totalXP: data.totalXP ?? 0,
-          habits: mergedHabits,
+          ...getInitialState(),
+          ...data,
+          habits: mergeHabits(data.habits || [], DEFAULT_HABITS),
+          attributes: { ...getInitialState().attributes, ...data.attributes },
+          inventory: data.inventory || [], // 👈 nuevo
         });
       } else {
-        setState({ totalXP: 0, habits: getDefaultHabits() });
+        setState(getInitialState());
       }
     } catch (e) {
       console.error('Firestore load failed', e);
-      loadFromLocalStorage(); // Fallback
+      loadFromLocalStorage();
     }
   };
 
-  // 📥 Cargar desde localStorage (fallback)
-  const loadFromLocalStorage = () => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        const savedHabits = parsed.habits || [];
-        const defaultHabits = getDefaultHabits();
-
-        // Fusionar: usar savedHabits, y añadir defaults que falten por id
-        const mergedHabits = [...savedHabits];
-        defaultHabits.forEach((def) => {
-          if (!mergedHabits.some((h: any) => h.id === def.id)) {
-            mergedHabits.push(def);
-          }
-        });
-
-        setState({
-          totalXP: parsed.totalXP ?? 0,
-          habits: mergedHabits,
-        });
-      } catch (e) {
-        console.warn('Failed to parse state, using defaults', e);
-        setState({ totalXP: 0, habits: getDefaultHabits() });
+  // 🔁 Cargar datos al iniciar
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        loadFromLocalStorage();
+      } else {
+        await loadFromFirestore(user.uid);
       }
-    } else {
-      // Si no hay nada guardado, usar defaults
-      setState({ totalXP: 0, habits: getDefaultHabits() });
+    });
+    
+    return () => unsubscribe();
+  }, []);
+
+  // 💾 Guardar estado
+  const saveState = async (newState: UserState) => {
+    const now = new Date().toISOString();
+    const updatedState = { ...newState, updatedAt: now };
+    setState(updatedState);
+    
+    try {
+      const user = auth.currentUser;
+      if (user) {
+        await setDoc(doc(db, 'users', user.uid), updatedState);
+      } else {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedState));
+      }
+    } catch (e) {
+      console.error('Failed to save state', e);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedState));
     }
   };
 
-  // ✅ Marcar hábito
+  // ✅ Marcar hábito (lógica épica)
   const toggleHabit = (habitId: string) => {
     const today = new Date().toISOString().split('T')[0];
-    const habit = state.habits.find((h) => h.id === habitId);
-
+    const habit = state.habits.find(h => h.id === habitId);
     if (!habit) return;
-
-    // Evitar duplicados hoy
     if (habit.lastCompleted === today) return;
 
-    // Calcular racha
-    const yesterday = new Date(Date.now() - 864e5)
-      .toISOString()
-      .split('T')[0];
-    const newStreak =
-      habit.lastCompleted === yesterday ? habit.streak + 1 : 1;
+    // 📈 Calcular nuevo streak
+    const yesterday = new Date(Date.now() - 864e5).toISOString().split('T')[0];
+    const newStreak = habit.lastCompleted === yesterday ? habit.streak + 1 : 1;
 
-    // 👇 XP dinámico por dificultad
+    // 💥 Efecto en energía y salud
+    const energyCost = ENERGY_COST[habit.difficulty];
+    const healthGain = habit.category === 'health' ? 2 : habit.category === 'exercise' ? 1 : 0;
+
+    // 🧠 Atributo asociado
+    const attribute = ATTRIBUTE_BY_CATEGORY[habit.category];
     const xpReward = XP_BY_DIFFICULTY[habit.difficulty];
 
-    const updatedHabit: Habit = {
-      ...habit,
-      streak: newStreak,
-      lastCompleted: today,
-    };
+    // 📊 Nuevo nivel
+    const newTotalXP = state.totalXP + xpReward;
+    const newLevel = calculateLevel(newTotalXP);
+    const levelUp = newLevel > state.level;
 
+    // 🧠 Subir atributo si completas la misión
+    let newAttributes = { ...state.attributes };
+    if (levelUp) {
+      // Solo sube el atributo de la categoría completada HOY
+      const completedToday = state.habits
+        .filter(h => h.lastCompleted === today && h.category === habit.category)
+        .length > 0;
+      
+      if (completedToday) {
+        const currentVal = newAttributes[attribute];
+        newAttributes[attribute] = currentVal + 1;
+      }
+    }
+
+    // 📈 Nuevo estado
+    const updatedHabit: Habit = { ...habit, streak: newStreak, lastCompleted: today };
     const newState: UserState = {
-      totalXP: state.totalXP + xpReward,
-      habits: [...state.habits.filter((h) => h.id !== habitId), updatedHabit],
+      ...state,
+      totalXP: newTotalXP,
+      level: newLevel,
+      habits: [...state.habits.filter(h => h.id !== habitId), updatedHabit],
+      attributes: newAttributes,
+      energy: Math.max(0, Math.min(100, state.energy - energyCost + (levelUp ? 10 : 0))),
+      health: Math.max(0, Math.min(100, state.health + healthGain)),
+      status: state.energy < 30 ? 'cansado' : state.energy > 85 ? 'motivado' : 'activo',
     };
 
     saveState(newState);
   };
 
-  // 📈 Nivel y progreso
-  const getXPToReachLevel = (level: number): number => {
-    if (level <= 1) return 0;
-    let total = 0;
-    for (let l = 2; l <= level; l++) {
-      total += 50 * l * (l - 1);
-    }
-    return total;
+  // 🎒 Añadir item al inventario
+  const addItem = (item: Omit<InventoryItem, 'id' | 'dateAcquired'>) => {
+    const newItem: InventoryItem = {
+      ...item,
+      id: `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      dateAcquired: new Date().toISOString(),
+    };
+
+    const newState = {
+      ...state,
+      inventory: [...state.inventory, newItem],
+    };
+
+    saveState(newState);
   };
 
-  const currentLevel = (() => {
-    let level = 1;
-    while (getXPToReachLevel(level + 1) <= state.totalXP) level++;
-    return level;
-  })();
+  // 🗑️ Eliminar item del inventario
+  const removeItem = (itemId: string) => {
+    const newState = {
+      ...state,
+      inventory: state.inventory.filter(item => item.id !== itemId),
+    };
 
-  const totalXPForNext = getXPToReachLevel(currentLevel + 1);
-  const totalXPForCurrent = getXPToReachLevel(currentLevel);
-  const xpProgress = state.totalXP - totalXPForCurrent;
-  const xpNeeded = totalXPForNext - totalXPForCurrent;
-  const progressPercent =
-    xpNeeded > 0
-      ? Math.min(100, Math.round((xpProgress / xpNeeded) * 100))
-      : 100;
+    saveState(newState);
+  };
 
-  // 📅 ¿Completado hoy? (solo para el primer hábito por ahora — opcional)
+  // ✏️ Actualizar perfil (nombre, edad, título)
+  const updateProfile = (newProfile: { name: string; age: number; title: string }) => {
+    const newState = {
+      ...state,
+      name: newProfile.name,
+      age: newProfile.age,
+      title: newProfile.title,
+    };
+    saveState(newState);
+  };
+
+  // 📅 Misiones diarias → mínimo 2 por categoría (pendientes > completados)
   const today = new Date().toISOString().split('T')[0];
-  const readHabit = state.habits.find((h) => h.id === 'read-10min');
-  const completedToday = readHabit?.lastCompleted === today;
-
-  // 🧭 Misiones diarias por categoría
   const categories: HabitCategory[] = ['exercise', 'mind', 'health', 'productivity'];
+
   const dailyMissions = categories.reduce((acc, category) => {
-    const pending = state.habits
-      .filter(h => h.category === category && h.lastCompleted !== today)
+    const allHabits = state.habits.filter(h => h.category === category);
+    
+    // 1. Prioriza pendientes hoy (no completados)
+    const pending = allHabits
+      .filter(h => h.lastCompleted !== today)
       .sort((a, b) => 
         ({ hard: 3, medium: 2, easy: 1 }[a.difficulty] - 
          { hard: 3, medium: 2, easy: 1 }[b.difficulty])
       );
-    acc[category] = pending[0] || null; // null si todos completados
+
+    // 2. Si hay <2 pendientes, añade completados (como repaso)
+    const completed = allHabits
+      .filter(h => h.lastCompleted === today)
+      .sort((a, b) => 
+        ({ hard: 3, medium: 2, easy: 1 }[a.difficulty] - 
+         { hard: 3, medium: 2, easy: 1 }[b.difficulty])
+      );
+
+    // 3. Toma hasta 2 misiones (prioridad: pendientes > completados)
+    const missions = [...pending, ...completed].slice(0, 2);
+    
+    // 4. Devuelve un array (no un solo hábito)
+    acc[category] = missions.length > 0 ? missions : null;
     return acc;
-  }, {} as Record<HabitCategory, Habit | null>);
+  }, {} as Record<HabitCategory, Habit[] | null>);
 
   return {
-    level: currentLevel,
-    xpProgress,
-    xpNeeded,
-    progressPercent,
-    habits: state.habits,
-    dailyMissions, // 👈 nuevo
+    ...state,
+    dailyMissions,
     toggleHabit,
-    completedToday,
+    addItem,          // 👈 nuevo
+    removeItem,       // 👈 nuevo
+    updateProfile,    // 👈 nuevo
+    xpToNextLevel: getXPToReachLevel(state.level + 1) - getXPToReachLevel(state.level),
+    xpProgress: state.totalXP - getXPToReachLevel(state.level),
+    progressPercent: Math.min(100, Math.round(
+      (state.totalXP - getXPToReachLevel(state.level)) / 
+      (getXPToReachLevel(state.level + 1) - getXPToReachLevel(state.level)) * 100
+    )),
+    name: state.name,
+    age: state.age,
+    title: state.title,
   };
 };
