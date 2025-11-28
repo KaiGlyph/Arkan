@@ -1,15 +1,27 @@
 // src/types.ts
-export type HabitCategory = 'exercise' | 'mind' | 'health' | 'productivity';
+
+export type HabitCategory = 
+  | 'exercise'      // → Fuerza
+  | 'mobility'      // → Agilidad (nuevo)
+  | 'health'        // → Vitalidad
+  | 'mind'          // → Inteligencia
+  | 'productivity'  // → Percepción
+  | 'discipline';   // → Sense (nuevo)
+
 export type HabitDifficulty = 'easy' | 'medium' | 'hard';
 export type HabitFrequency = 'daily' | 'weekly';
 
-export type RealAttribute = 
-  | 'condicionFisica'
-  | 'movilidad'
-  | 'salud'
-  | 'conocimiento'
-  | 'atencion'
-  | 'autocontrol';
+// ✅ Stats reales (renombrados para claridad)
+export type StatName = 
+  | 'fuerza'
+  | 'agilidad'
+  | 'vitalidad'
+  | 'inteligencia'
+  | 'percepcion'
+  | 'sense';
+
+// 🔁 Alias para compatibilidad (opcional, pero ayuda en migración)
+export type RealAttribute = StatName;
 
 // 👇 Añade estos tipos nuevos
 export type ItemRarity = 'normal' | 'raro' | 'elite' | 'legendario';
@@ -30,7 +42,7 @@ export interface InventoryItem {
   rarity: ItemRarity;
   dateAcquired: string;
   bonus?: {
-    attribute: RealAttribute;
+    stat: StatName;      // ✅ stat, no attribute
     value: number;
     description: string;
   };
@@ -39,7 +51,7 @@ export interface InventoryItem {
 export interface Illness {
   id: string;
   name: string;
-  penalties: Partial<Record<RealAttribute, number>>;
+  penalties: Partial<Record<StatName, number>>;
 }
 
 export interface Habit {
@@ -52,18 +64,29 @@ export interface Habit {
   lastCompleted: string | null;
 }
 
+// ✅ Recompensa flexible (daily missions, level up, quests)
+export interface StatReward {
+  id: string;
+  type: 'dailyMissions' | 'levelUp' | 'quest';
+  description: string;
+  stats: Partial<Record<StatName, number>> & { points?: number }; // points = asignables
+  createdAt: string;
+  claimedAt?: string;
+}
+
 export interface UserState {
   totalXP: number;
   habits: Habit[];
   level: number;
-  attributes: Record<RealAttribute, number>;
+  attributes: Record<StatName, number>;
   energy: number;
   health: number;
   status: 'activo' | 'cansado' | 'motivado' | 'estresado';
   illnesses: Illness[];
-  inventory: InventoryItem[]; // 👈 Añade esta línea
+  inventory: InventoryItem[];
   name: string;
   age: number;
   title: string;
   updatedAt: string;
+  unclaimedRewards: StatReward[];
 }
