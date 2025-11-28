@@ -1,5 +1,5 @@
 // src/constants.ts
-import type { HabitDifficulty, HabitCategory, RealAttribute, Habit } from './types';
+import type { HabitDifficulty, HabitCategory, RealAttribute, Habit, ItemRarity, ItemCategory} from './types';
 
 // 📊 XP por dificultad
 export const XP_BY_DIFFICULTY: Record<HabitDifficulty, number> = {
@@ -87,6 +87,32 @@ export const DEFAULT_HABITS: Habit[] = [
   // Productividad
   { id: 'plan-day', name: 'Planificar día', category: 'productivity', difficulty: 'medium', frequency: 'daily', streak: 0, lastCompleted: null },
 ];
+
+// 🎨 Colores de rareza de items
+export const RARITY_COLORS: Record<ItemRarity, string> = {
+  normal: '#9E9E9E',
+  raro: '#2196F3',
+  elite: '#9C27B0',
+  legendario: '#FF9800',
+} as const;
+
+// 📝 Nombres de rareza
+export const RARITY_NAMES: Record<ItemRarity, string> = {
+  normal: 'Normal',
+  raro: 'Raro',
+  elite: 'Élite',
+  legendario: 'Legendario',
+} as const;
+
+// 📦 Nombres de categorías de inventario (sin emojis)
+export const ITEM_CATEGORY_NAMES: Record<ItemCategory, string> = {
+  herramientas: 'Herramientas',
+  documentos: 'Documentos',
+  personales: 'Personales',
+  ropa: 'Ropa',
+  libros: 'Libros',
+  cursos: 'Cursos',
+} as const;
 
 // 💾 Clave de localStorage
 export const STORAGE_KEY = 'arkan_user_v1';

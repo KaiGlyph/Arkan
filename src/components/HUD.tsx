@@ -1,8 +1,16 @@
 import { useEffect, useState } from 'react';
 import { useHabits } from '../hooks/useHabits';
-import { XP_BY_DIFFICULTY, DISPLAY_NAMES, STATUS_TEXT, STATUS_COLORS, CATEGORY_COLORS } from '../constants';
-import type { RealAttribute } from '../types';
-
+import { 
+  XP_BY_DIFFICULTY, 
+  DISPLAY_NAMES, 
+  STATUS_TEXT, 
+  STATUS_COLORS, 
+  CATEGORY_COLORS,
+  RARITY_COLORS,
+  RARITY_NAMES,
+  ITEM_CATEGORY_NAMES
+} from '../constants';
+import type { RealAttribute, ItemCategory, ItemRarity } from '../types';
 
 export default function HUD() {
   const {
@@ -17,18 +25,26 @@ export default function HUD() {
     habits,
     dailyMissions,
     toggleHabit,
-    name,      
+    name,
     age,
     title,
+    inventory,
+    addItem,
+    removeItem,
+    updateProfile,
   } = useHabits();
-  const handleSaveProfile = () => {
-    // Aquí necesitarás añadir una función updateProfile en useHabits
-    // Por ahora, cierra el modal
-    setModal(null);
-  };
 
   const [modal, setModal] = useState<null | 'missions' | 'inventory' | 'titles' | 'pets' | 'profile'>(null);
   const [editProfile, setEditProfile] = useState({ name: '', age: 0, title: '' });
+  const [filterCategory, setFilterCategory] = useState<ItemCategory | 'all'>('all');
+  const [showAddItem, setShowAddItem] = useState(false);
+  
+  const [newItem, setNewItem] = useState({
+    name: '',
+    description: '',
+    category: 'herramientas' as ItemCategory,
+    rarity: 'normal' as ItemRarity,
+  });
 
   // 🔔 Notificaciones activas (recordatorio cada minuto si hay hábitos pendientes)
   useEffect(() => {
@@ -57,9 +73,37 @@ export default function HUD() {
     };
 
     requestPermission();
-    const interval = setInterval(checkPending, 60000); // cada minuto
+    const interval = setInterval(checkPending, 60000);
     return () => clearInterval(interval);
   }, [habits]);
+
+  const handleSaveProfile = () => {
+    updateProfile(editProfile);
+    setModal(null);
+  };
+
+  const handleAddItem = () => {
+    if (!newItem.name.trim()) return;
+    
+    addItem({
+      name: newItem.name,
+      description: newItem.description,
+      category: newItem.category,
+      rarity: newItem.rarity,
+    });
+
+    setNewItem({
+      name: '',
+      description: '',
+      category: 'herramientas',
+      rarity: 'normal',
+    });
+    setShowAddItem(false);
+  };
+
+  const filteredItems = filterCategory === 'all' 
+    ? inventory 
+    : inventory.filter(item => item.category === filterCategory);
 
   return (
     <div style={{
@@ -106,6 +150,7 @@ export default function HUD() {
           ARKAN
         </div>
       </div>
+
       {/* 👤 Perfil del Usuario */}
       <div style={{ 
         marginBottom: '20px', 
@@ -113,7 +158,7 @@ export default function HUD() {
         padding: '16px', 
         borderRadius: '12px',
         textAlign: 'center',
-        position: 'relative', // 👈 nuevo
+        position: 'relative',
       }}>
         {/* Botón editar */}
         <button
@@ -154,125 +199,6 @@ export default function HUD() {
           {title}
         </div>
       </div>
-
-      // Y añade el modal al final (antes del cierre del div principal):
-      {/* 🖼️ Modal de Editar Perfil */}
-      {modal === 'profile' && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          width: '100%',
-          height: '100%',
-          backgroundColor: 'rgba(0,0,0,0.8)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000,
-        }}>
-          <div style={{
-            backgroundColor: '#25153A',
-            width: '90%',
-            maxWidth: '400px',
-            borderRadius: '12px',
-            padding: '24px',
-          }}>
-            <div style={{ 
-              display: 'flex', 
-              justifyContent: 'space-between', 
-              alignItems: 'center',
-              marginBottom: '20px'
-            }}>
-              <h2 style={{ fontFamily: "'Orbitron', sans-serif", margin: 0 }}>
-                EDITAR PERFIL
-              </h2>
-              <button onClick={() => setModal(null)} style={{
-                background: 'none',
-                border: 'none',
-                color: '#888',
-                fontSize: '24px',
-                cursor: 'pointer'
-              }}>✕</button>
-            </div>
-
-            <div style={{ marginBottom: '16px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', opacity: 0.8 }}>
-                Nombre
-              </label>
-              <input
-                type="text"
-                value={editProfile.name}
-                onChange={(e) => setEditProfile({...editProfile, name: e.target.value})}
-                style={{
-                  width: '100%',
-                  padding: '10px',
-                  backgroundColor: '#33244A',
-                  border: '1px solid #B18CFF',
-                  borderRadius: '6px',
-                  color: 'white',
-                  fontSize: '14px',
-                }}
-              />
-            </div>
-
-            <div style={{ marginBottom: '16px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', opacity: 0.8 }}>
-                Edad
-              </label>
-              <input
-                type="number"
-                value={editProfile.age}
-                onChange={(e) => setEditProfile({...editProfile, age: parseInt(e.target.value)})}
-                style={{
-                  width: '100%',
-                  padding: '10px',
-                  backgroundColor: '#33244A',
-                  border: '1px solid #B18CFF',
-                  borderRadius: '6px',
-                  color: 'white',
-                  fontSize: '14px',
-                }}
-              />
-            </div>
-
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', opacity: 0.8 }}>
-                Título
-              </label>
-              <input
-                type="text"
-                value={editProfile.title}
-                onChange={(e) => setEditProfile({...editProfile, title: e.target.value})}
-                style={{
-                  width: '100%',
-                  padding: '10px',
-                  backgroundColor: '#33244A',
-                  border: '1px solid #B18CFF',
-                  borderRadius: '6px',
-                  color: 'white',
-                  fontSize: '14px',
-                }}
-              />
-            </div>
-
-            <button
-              onClick={handleSaveProfile}
-              style={{
-                width: '100%',
-                padding: '12px',
-                backgroundColor: '#4CAF50',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                fontWeight: 'bold',
-                cursor: 'pointer',
-              }}
-            >
-              Guardar Cambios
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* 📊 Estado Épico */}
       <div style={{ marginBottom: '24px', backgroundColor: '#33244A', padding: '16px', borderRadius: '12px' }}>
@@ -329,7 +255,7 @@ export default function HUD() {
           </div>
         </div>
 
-        {/* Atributos — nombres reales con números */}
+        {/* Atributos */}
         <div style={{ 
           display: 'grid', 
           gridTemplateColumns: 'repeat(3, 1fr)', 
@@ -347,7 +273,7 @@ export default function HUD() {
         </div>
       </div>
 
-      {/* 🔘 Botones de navegación (abren modales) */}
+      {/* 🔘 Botones de navegación */}
       <div style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(2, 1fr)',
@@ -457,194 +383,344 @@ export default function HUD() {
               }}>✕</button>
             </div>
 
-            {/* Listado de misiones por categoría */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {(['exercise', 'mind', 'health', 'productivity'] as const).map(category => (
+                dailyMissions[category] && dailyMissions[category]!.map((habit) => {
+                  const today = new Date().toISOString().split('T')[0];
+                  const isCompleted = habit.lastCompleted === today;
+                  
+                  return (
+                    <div key={habit.id} style={{
+                      backgroundColor: '#33244A',
+                      padding: '16px',
+                      borderRadius: '8px',
+                      border: `2px solid ${CATEGORY_COLORS[category]}`,
+                      opacity: isCompleted ? 0.6 : 1,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '16px',
+                    }}>
+                      {/* Checkbox estilo imagen */}
+                      <button
+                        onClick={() => toggleHabit(habit.id)}
+                        disabled={isCompleted}
+                        style={{
+                          width: '32px',
+                          height: '32px',
+                          minWidth: '32px',
+                          minHeight: '32px',
+                          borderRadius: '50%',
+                          border: `3px solid ${isCompleted ? '#4CAF50' : '#666'}`,
+                          backgroundColor: isCompleted ? '#4CAF50' : 'transparent',
+                          cursor: isCompleted ? 'default' : 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: 'white',
+                          fontSize: '16px',
+                          fontWeight: 'bold',
+                          transition: 'all 0.3s ease',
+                        }}
+                      >
+                        {isCompleted ? '✓' : ''}
+                      </button>
 
-              {/* Ejercicio */}
-              {dailyMissions.exercise && dailyMissions.exercise.map((habit) => {
-                const today = new Date().toISOString().split('T')[0];
-                return (
-                  <div key={habit.id} style={{
-                    backgroundColor: '#33244A',
-                    padding: '16px',
-                    borderRadius: '8px',
-                    border: `2px solid ${CATEGORY_COLORS.exercise}`,
-                    opacity: habit.lastCompleted === today ? 0.6 : 1,
-                  }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div>
-                        <div style={{ fontSize: '12px', opacity: 0.7, marginBottom: '4px' }}>
-                          {habit.lastCompleted === today ? '🔁 MISIÓN SECUNDARIA' : '🎯 MISIÓN PRINCIPAL'}
+                      {/* Contenido de la misión */}
+                      <div style={{ flex: 1 }}>
+                        <div style={{ 
+                          fontSize: '11px', 
+                          opacity: 0.7, 
+                          marginBottom: '4px',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px',
+                        }}>
+                          {isCompleted ? 'MISIÓN SECUNDARIA' : 'MISIÓN PRINCIPAL'}
                         </div>
-                        <div style={{ fontWeight: 'bold', fontSize: '16px' }}>{habit.name}</div>
-                        <div style={{ fontSize: '12px', marginTop: '4px', color: '#FFD93D' }}>
+                        <div style={{ 
+                          fontWeight: 'bold', 
+                          fontSize: '16px',
+                          marginBottom: '4px',
+                        }}>
+                          {habit.name}
+                        </div>
+                        <div style={{ 
+                          fontSize: '12px', 
+                          color: '#FFD93D',
+                        }}>
                           +{XP_BY_DIFFICULTY[habit.difficulty]} XP
                         </div>
-                        {habit.lastCompleted === today && (
-                          <div style={{ fontSize: '10px', color: '#4CAF50', marginTop: '4px' }}>
-                            ✅ Completado hoy
+                        {isCompleted && (
+                          <div style={{ 
+                            fontSize: '10px', 
+                            color: '#4CAF50', 
+                            marginTop: '4px',
+                          }}>
+                            Completado hoy
                           </div>
                         )}
                       </div>
-                      <button
-                        onClick={() => toggleHabit(habit.id)}
-                        style={{
-                          padding: '8px 16px',
-                          backgroundColor: habit.lastCompleted === today ? '#666' : '#4CAF50',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '6px',
-                          fontWeight: 'bold',
-                          cursor: 'pointer',
-                        }}
-                        disabled={habit.lastCompleted === today}
-                      >
-                        ✓
-                      </button>
                     </div>
-                  </div>
-                );
-              })}
-
-              {/* Mente */}
-              {dailyMissions.mind && dailyMissions.mind.map((habit) => {
-                const today = new Date().toISOString().split('T')[0];
-                return (
-                  <div key={habit.id} style={{
-                    backgroundColor: '#33244A',
-                    padding: '16px',
-                    borderRadius: '8px',
-                    border: `2px solid ${CATEGORY_COLORS.mind}`,
-                    opacity: habit.lastCompleted === today ? 0.6 : 1,
-                  }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div>
-                        <div style={{ fontSize: '12px', opacity: 0.7, marginBottom: '4px' }}>
-                          {habit.lastCompleted === today ? '🔁 MISIÓN SECUNDARIA' : '🎯 MISIÓN PRINCIPAL'}
-                        </div>
-                        <div style={{ fontWeight: 'bold', fontSize: '16px' }}>{habit.name}</div>
-                        <div style={{ fontSize: '12px', marginTop: '4px', color: '#FFD93D' }}>
-                          +{XP_BY_DIFFICULTY[habit.difficulty]} XP
-                        </div>
-                        {habit.lastCompleted === today && (
-                          <div style={{ fontSize: '10px', color: '#4CAF50', marginTop: '4px' }}>
-                            ✅ Completado hoy
-                          </div>
-                        )}
-                      </div>
-                      <button
-                        onClick={() => toggleHabit(habit.id)}
-                        style={{
-                          padding: '8px 16px',
-                          backgroundColor: habit.lastCompleted === today ? '#666' : '#4CAF50',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '6px',
-                          fontWeight: 'bold',
-                          cursor: 'pointer',
-                        }}
-                        disabled={habit.lastCompleted === today}
-                      >
-                        ✓
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-
-              {/* Salud */}
-              {dailyMissions.health && dailyMissions.health.map((habit) => {
-                const today = new Date().toISOString().split('T')[0];
-                return (
-                  <div key={habit.id} style={{
-                    backgroundColor: '#33244A',
-                    padding: '16px',
-                    borderRadius: '8px',
-                    border: `2px solid ${CATEGORY_COLORS.health}`,
-                    opacity: habit.lastCompleted === today ? 0.6 : 1,
-                  }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div>
-                        <div style={{ fontSize: '12px', opacity: 0.7, marginBottom: '4px' }}>
-                          {habit.lastCompleted === today ? '🔁 MISIÓN SECUNDARIA' : '🎯 MISIÓN PRINCIPAL'}
-                        </div>
-                        <div style={{ fontWeight: 'bold', fontSize: '16px' }}>{habit.name}</div>
-                        <div style={{ fontSize: '12px', marginTop: '4px', color: '#FFD93D' }}>
-                          +{XP_BY_DIFFICULTY[habit.difficulty]} XP
-                        </div>
-                        {habit.lastCompleted === today && (
-                          <div style={{ fontSize: '10px', color: '#4CAF50', marginTop: '4px' }}>
-                            ✅ Completado hoy
-                          </div>
-                        )}
-                      </div>
-                      <button
-                        onClick={() => toggleHabit(habit.id)}
-                        style={{
-                          padding: '8px 16px',
-                          backgroundColor: habit.lastCompleted === today ? '#666' : '#4CAF50',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '6px',
-                          fontWeight: 'bold',
-                          cursor: 'pointer',
-                        }}
-                        disabled={habit.lastCompleted === today}
-                      >
-                        ✓
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-
-              {/* Productividad */}
-              {dailyMissions.productivity && dailyMissions.productivity.map((habit) => {
-                const today = new Date().toISOString().split('T')[0];
-                return (
-                  <div key={habit.id} style={{
-                    backgroundColor: '#33244A',
-                    padding: '16px',
-                    borderRadius: '8px',
-                    border: `2px solid ${CATEGORY_COLORS.productivity}`,
-                    opacity: habit.lastCompleted === today ? 0.6 : 1,
-                  }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div>
-                        <div style={{ fontSize: '12px', opacity: 0.7, marginBottom: '4px' }}>
-                          {habit.lastCompleted === today ? '🔁 MISIÓN SECUNDARIA' : '🎯 MISIÓN PRINCIPAL'}
-                        </div>
-                        <div style={{ fontWeight: 'bold', fontSize: '16px' }}>{habit.name}</div>
-                        <div style={{ fontSize: '12px', marginTop: '4px', color: '#FFD93D' }}>
-                          +{XP_BY_DIFFICULTY[habit.difficulty]} XP
-                        </div>
-                        {habit.lastCompleted === today && (
-                          <div style={{ fontSize: '10px', color: '#4CAF50', marginTop: '4px' }}>
-                            ✅ Completado hoy
-                          </div>
-                        )}
-                      </div>
-                      <button
-                        onClick={() => toggleHabit(habit.id)}
-                        style={{
-                          padding: '8px 16px',
-                          backgroundColor: habit.lastCompleted === today ? '#666' : '#4CAF50',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '6px',
-                          fontWeight: 'bold',
-                          cursor: 'pointer',
-                        }}
-                        disabled={habit.lastCompleted === today}
-                      >
-                        ✓
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-
+                  );
+                })
+              ))}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* 🖼️ Modal de Inventario */}
+      {modal === 'inventory' && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          backgroundColor: 'rgba(0,0,0,0.8)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+        }}>
+          <div style={{
+            backgroundColor: '#25153A',
+            width: '90%',
+            maxWidth: '600px',
+            maxHeight: '85vh',
+            borderRadius: '12px',
+            padding: '24px',
+            overflowY: 'auto',
+          }}>
+            <div style={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center',
+              marginBottom: '20px'
+            }}>
+              <h2 style={{ fontFamily: "'Orbitron', sans-serif", margin: 0 }}>
+                INVENTARIO
+              </h2>
+              <button onClick={() => setModal(null)} style={{
+                background: 'none',
+                border: 'none',
+                color: '#888',
+                fontSize: '24px',
+                cursor: 'pointer'
+              }}>✕</button>
+            </div>
+
+            <button
+              onClick={() => setShowAddItem(!showAddItem)}
+              style={{
+                width: '100%',
+                padding: '12px',
+                backgroundColor: '#4CAF50',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                marginBottom: '16px',
+              }}
+            >
+              {showAddItem ? '✕ Cancelar' : '+ Añadir Item'}  {/* 👈 Ya está aquí, es correcto */}
+            </button>
+
+            {showAddItem && (
+              <div style={{
+                backgroundColor: '#33244A',
+                padding: '16px',
+                borderRadius: '8px',
+                marginBottom: '16px',
+              }}>
+                <input
+                  type="text"
+                  placeholder="Nombre del item"
+                  value={newItem.name}
+                  onChange={(e) => setNewItem({...newItem, name: e.target.value})}
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    marginBottom: '8px',
+                    backgroundColor: '#25153A',
+                    border: '1px solid #B18CFF',
+                    borderRadius: '4px',
+                    color: 'white',
+                    fontSize: '14px',
+                  }}
+                />
+                <textarea
+                  placeholder="Descripción"
+                  value={newItem.description}
+                  onChange={(e) => setNewItem({...newItem, description: e.target.value})}
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    marginBottom: '8px',
+                    backgroundColor: '#25153A',
+                    border: '1px solid #B18CFF',
+                    borderRadius: '4px',
+                    color: 'white',
+                    fontSize: '14px',
+                    minHeight: '60px',
+                    resize: 'vertical',
+                  }}
+                />
+                <select
+                  value={newItem.category}
+                  onChange={(e) => setNewItem({...newItem, category: e.target.value as ItemCategory})}
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    marginBottom: '8px',
+                    backgroundColor: '#25153A',
+                    border: '1px solid #B18CFF',
+                    borderRadius: '4px',
+                    color: 'white',
+                    fontSize: '14px',
+                  }}
+                >
+                  {Object.keys(ITEM_CATEGORY_NAMES).map(cat => (
+                    <option key={cat} value={cat}>{ITEM_CATEGORY_NAMES[cat as ItemCategory]}</option>
+                  ))}
+                </select>
+                <select
+                  value={newItem.rarity}
+                  onChange={(e) => setNewItem({...newItem, rarity: e.target.value as ItemRarity})}
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    marginBottom: '12px',
+                    backgroundColor: '#25153A',
+                    border: '1px solid #B18CFF',
+                    borderRadius: '4px',
+                    color: 'white',
+                    fontSize: '14px',
+                  }}
+                >
+                  {Object.keys(RARITY_NAMES).map(rar => (
+                    <option key={rar} value={rar}>{RARITY_NAMES[rar as ItemRarity]}</option>
+                  ))}
+                </select>
+                <button
+                  onClick={handleAddItem}
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    backgroundColor: '#2196F3',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontWeight: 'bold',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Guardar Item
+                </button>
+              </div>
+            )}
+
+            <div style={{
+              display: 'flex',
+              gap: '8px',
+              marginBottom: '16px',
+              flexWrap: 'wrap',
+            }}>
+              <button
+                onClick={() => setFilterCategory('all')}
+                style={{
+                  padding: '6px 12px',
+                  backgroundColor: filterCategory === 'all' ? '#B18CFF' : '#33244A',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontSize: '12px',
+                  cursor: 'pointer',
+                }}
+              >
+                Todos
+              </button>
+              {Object.keys(ITEM_CATEGORY_NAMES).map(cat => (
+                <button
+                  key={cat}
+                  onClick={() => setFilterCategory(cat as ItemCategory)}
+                  style={{
+                    padding: '6px 12px',
+                    backgroundColor: filterCategory === cat ? '#B18CFF' : '#33244A',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontSize: '12px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {ITEM_CATEGORY_NAMES[cat as ItemCategory]}
+                </button>
+              ))}
+            </div>
+
+            {filteredItems.length === 0 ? (
+              <p style={{ textAlign: 'center', opacity: 0.7 }}>
+                No tienes items en esta categoría
+              </p>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {filteredItems.map(item => (
+                  <div key={item.id} style={{
+                    backgroundColor: '#33244A',
+                    padding: '16px',
+                    borderRadius: '8px',
+                    border: `2px solid ${RARITY_COLORS[item.rarity]}`,
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ 
+                          fontWeight: 'bold', 
+                          fontSize: '16px',
+                          marginBottom: '4px',
+                        }}>
+                          {item.name}
+                        </div>
+                        <div style={{ 
+                          fontSize: '11px', 
+                          color: RARITY_COLORS[item.rarity],
+                          marginBottom: '8px',
+                        }}>
+                          {RARITY_NAMES[item.rarity]} • {ITEM_CATEGORY_NAMES[item.category]}
+                        </div>
+                        {item.description && (
+                          <div style={{ 
+                            fontSize: '13px', 
+                            opacity: 0.8,
+                            marginBottom: '8px',
+                          }}>
+                            {item.description}
+                          </div>
+                        )}
+                        <div style={{ fontSize: '11px', opacity: 0.5 }}>
+                          Adquirido: {new Date(item.dateAcquired).toLocaleDateString()}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => removeItem(item.id)}
+                        style={{
+                          padding: '6px 12px',
+                          backgroundColor: '#F44336',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '6px',
+                          fontSize: '12px',
+                          cursor: 'pointer',
+                          marginLeft: '12px',
+                        }}
+                      >
+                        Eliminar
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -715,7 +791,7 @@ export default function HUD() {
               <input
                 type="number"
                 value={editProfile.age}
-                onChange={(e) => setEditProfile({...editProfile, age: parseInt(e.target.value)})}
+                onChange={(e) => setEditProfile({...editProfile, age: parseInt(e.target.value) || 0})}
                 style={{
                   width: '100%',
                   padding: '10px',
