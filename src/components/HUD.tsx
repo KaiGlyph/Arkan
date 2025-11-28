@@ -341,8 +341,7 @@ export default function HUD() {
         </button>
       </div>
 
-      {/* 🖼️ Modal de Misiones Diarias */}
-{/* 🖼️ Modal de Misiones Diarias - Estilo Solo Leveling */}
+{/* 🖼️ Modal de Misiones Diarias - Estilo Solo Leveling S2 (Lila) */}
 {modal === 'missions' && (
   <div style={{
     position: 'fixed',
@@ -350,7 +349,7 @@ export default function HUD() {
     left: 0,
     width: '100%',
     height: '100%',
-    backgroundColor: 'rgba(0, 10, 20, 0.92)',
+    backgroundColor: 'rgba(10, 5, 20, 0.92)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -363,8 +362,25 @@ export default function HUD() {
       width: '90%',
       maxWidth: '700px',
       maxHeight: '85vh',
-      overflowY: 'auto',
     }}>
+      {/* Botón cerrar en la esquina superior derecha */}
+      <button onClick={() => setModal(null)} style={{
+        position: 'absolute',
+        right: '10px',
+        top: '10px',
+        background: 'rgba(177, 140, 255, 0.15)',
+        border: '2px solid #B18CFF',
+        color: '#D8B4FE',
+        fontSize: '24px',
+        cursor: 'pointer',
+        padding: '4px 12px',
+        borderRadius: '6px',
+        fontWeight: 'bold',
+        transition: 'all 0.3s ease',
+        zIndex: 20,
+        lineHeight: 1,
+      }}>✕</button>
+
       {/* Marco decorativo exterior */}
       <div style={{
         position: 'absolute',
@@ -372,19 +388,19 @@ export default function HUD() {
         left: '-10px',
         right: '-10px',
         bottom: '-10px',
-        background: 'linear-gradient(135deg, rgba(100, 200, 255, 0.1) 0%, rgba(150, 100, 255, 0.1) 100%)',
+        background: 'linear-gradient(135deg, rgba(177, 140, 255, 0.1) 0%, rgba(216, 180, 254, 0.1) 100%)',
         borderRadius: '20px',
-        border: '1px solid rgba(100, 200, 255, 0.3)',
-        boxShadow: '0 0 40px rgba(100, 200, 255, 0.2), inset 0 0 20px rgba(0, 0, 0, 0.5)',
+        border: '1px solid rgba(177, 140, 255, 0.3)',
+        boxShadow: '0 0 40px rgba(177, 140, 255, 0.2), inset 0 0 20px rgba(0, 0, 0, 0.5)',
         pointerEvents: 'none',
       }}></div>
 
       {/* Esquinas decorativas */}
       {[
-        { top: '0', left: '0', borderTop: '3px solid #64C8FF', borderLeft: '3px solid #64C8FF' },
-        { top: '0', right: '0', borderTop: '3px solid #64C8FF', borderRight: '3px solid #64C8FF' },
-        { bottom: '0', left: '0', borderBottom: '3px solid #64C8FF', borderLeft: '3px solid #64C8FF' },
-        { bottom: '0', right: '0', borderBottom: '3px solid #64C8FF', borderRight: '3px solid #64C8FF' },
+        { top: '0', left: '0', borderTop: '3px solid #B18CFF', borderLeft: '3px solid #B18CFF' },
+        { top: '0', right: '0', borderTop: '3px solid #B18CFF', borderRight: '3px solid #B18CFF' },
+        { bottom: '0', left: '0', borderBottom: '3px solid #B18CFF', borderLeft: '3px solid #B18CFF' },
+        { bottom: '0', right: '0', borderBottom: '3px solid #B18CFF', borderRight: '3px solid #B18CFF' },
       ].map((corner, i) => (
         <div key={i} style={{
           position: 'absolute',
@@ -398,12 +414,24 @@ export default function HUD() {
       {/* Panel principal */}
       <div style={{
         position: 'relative',
-        backgroundColor: 'rgba(10, 15, 25, 0.95)',
+        backgroundColor: 'rgba(25, 15, 40, 0.95)',
         borderRadius: '16px',
         padding: '40px 32px',
-        border: '1px solid rgba(100, 200, 255, 0.4)',
-        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.6), inset 0 0 60px rgba(0, 100, 200, 0.05)',
+        border: '1px solid rgba(177, 140, 255, 0.4)',
+        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.6), inset 0 0 60px rgba(100, 50, 150, 0.05)',
+        maxHeight: '85vh',
+        overflowY: 'auto',
+        /* Ocultar scrollbar */
+        scrollbarWidth: 'none',
+        msOverflowStyle: 'none',
       }}>
+        {/* Ocultar scrollbar en WebKit */}
+        <style>{`
+          div::-webkit-scrollbar {
+            display: none;
+          }
+        `}</style>
+
         {/* Header con título GOAL */}
         <div style={{ 
           display: 'flex', 
@@ -417,18 +445,18 @@ export default function HUD() {
             position: 'absolute',
             width: '100%',
             height: '2px',
-            background: 'linear-gradient(90deg, transparent 0%, #64C8FF 20%, #64C8FF 80%, transparent 100%)',
+            background: 'linear-gradient(90deg, transparent 0%, #B18CFF 20%, #B18CFF 80%, transparent 100%)',
             top: '50%',
             left: '0',
           }}></div>
           
           <div style={{
             position: 'relative',
-            backgroundColor: 'rgba(10, 15, 25, 0.9)',
+            backgroundColor: 'rgba(25, 15, 40, 0.9)',
             padding: '8px 48px',
             borderRadius: '8px',
-            border: '2px solid #64C8FF',
-            boxShadow: '0 0 20px rgba(100, 200, 255, 0.5), inset 0 0 20px rgba(100, 200, 255, 0.1)',
+            border: '2px solid #B18CFF',
+            boxShadow: '0 0 20px rgba(177, 140, 255, 0.5), inset 0 0 20px rgba(177, 140, 255, 0.1)',
           }}>
             <h2 style={{ 
               fontFamily: "'Orbitron', 'Rajdhani', sans-serif", 
@@ -436,30 +464,13 @@ export default function HUD() {
               fontSize: '32px',
               fontWeight: '700',
               letterSpacing: '6px',
-              color: '#64C8FF',
-              textShadow: '0 0 10px rgba(100, 200, 255, 0.8), 0 0 20px rgba(100, 200, 255, 0.4)',
+              color: '#D8B4FE',
+              textShadow: '0 0 10px rgba(216, 180, 254, 0.8), 0 0 20px rgba(177, 140, 255, 0.4)',
               textAlign: 'center',
             }}>
               GOAL
             </h2>
           </div>
-
-          {/* Botón cerrar */}
-          <button onClick={() => setModal(null)} style={{
-            position: 'absolute',
-            right: '0',
-            top: '50%',
-            transform: 'translateY(-50%)',
-            background: 'rgba(100, 200, 255, 0.1)',
-            border: '2px solid #64C8FF',
-            color: '#64C8FF',
-            fontSize: '24px',
-            cursor: 'pointer',
-            padding: '4px 12px',
-            borderRadius: '6px',
-            fontWeight: 'bold',
-            transition: 'all 0.3s ease',
-          }}>✕</button>
         </div>
 
         {/* Lista de misiones */}
@@ -475,11 +486,11 @@ export default function HUD() {
                   alignItems: 'center',
                   justifyContent: 'space-between',
                   padding: '18px 24px',
-                  backgroundColor: 'rgba(20, 30, 45, 0.6)',
+                  backgroundColor: 'rgba(40, 30, 60, 0.6)',
                   borderRadius: '10px',
-                  border: `1px solid ${isCompleted ? 'rgba(100, 200, 255, 0.4)' : 'rgba(100, 150, 200, 0.2)'}`,
+                  border: `1px solid ${isCompleted ? 'rgba(177, 140, 255, 0.4)' : 'rgba(120, 100, 150, 0.2)'}`,
                   boxShadow: isCompleted 
-                    ? '0 0 15px rgba(100, 200, 255, 0.3), inset 0 0 15px rgba(100, 200, 255, 0.05)'
+                    ? '0 0 15px rgba(177, 140, 255, 0.3), inset 0 0 15px rgba(177, 140, 255, 0.05)'
                     : '0 2px 8px rgba(0, 0, 0, 0.3)',
                   transition: 'all 0.3s ease',
                   position: 'relative',
@@ -493,7 +504,7 @@ export default function HUD() {
                       left: 0,
                       right: 0,
                       bottom: 0,
-                      background: 'linear-gradient(90deg, transparent 0%, rgba(100, 200, 255, 0.1) 50%, transparent 100%)',
+                      background: 'linear-gradient(90deg, transparent 0%, rgba(177, 140, 255, 0.1) 50%, transparent 100%)',
                       animation: 'shimmer 2s infinite',
                     }}></div>
                   )}
@@ -505,21 +516,21 @@ export default function HUD() {
                       fontWeight: '600', 
                       fontSize: '20px',
                       marginBottom: '6px',
-                      color: isCompleted ? 'rgba(100, 200, 255, 0.7)' : '#E0F2FF',
+                      color: isCompleted ? 'rgba(200, 200, 200, 0.6)' : '#FFFFFF',
                       letterSpacing: '0.5px',
-                      textShadow: isCompleted ? 'none' : '0 0 5px rgba(100, 200, 255, 0.3)',
+                      textShadow: isCompleted ? 'none' : '0 0 5px rgba(177, 140, 255, 0.3)',
                       textDecoration: isCompleted ? 'line-through' : 'none',
                     }}>
                       {habit.name}
                     </div>
                     <div style={{ 
                       fontSize: '14px', 
-                      color: isCompleted ? 'rgba(150, 200, 255, 0.5)' : '#90CAF9',
+                      color: isCompleted ? 'rgba(177, 140, 255, 0.5)' : '#D8B4FE',
                       fontWeight: '500',
                       fontFamily: "'Rajdhani', sans-serif",
                       letterSpacing: '1px',
                     }}>
-                      [{XP_BY_DIFFICULTY[habit.difficulty]}/{XP_BY_DIFFICULTY[habit.difficulty]}]
+                      [{XP_BY_DIFFICULTY[habit.difficulty]} XP]
                     </div>
                   </div>
 
@@ -533,18 +544,18 @@ export default function HUD() {
                       minWidth: '40px',
                       minHeight: '40px',
                       borderRadius: '6px',
-                      border: `2px solid ${isCompleted ? '#64C8FF' : 'rgba(100, 150, 200, 0.5)'}`,
-                      backgroundColor: isCompleted ? 'rgba(100, 200, 255, 0.2)' : 'rgba(30, 40, 60, 0.5)',
+                      border: `2px solid ${isCompleted ? '#4caf4fff' : 'rgba(120, 100, 150, 0.5)'}`,
+                      backgroundColor: isCompleted ? 'rgba(76, 175, 80, 0.3)' : 'rgba(40, 30, 60, 0.5)',
                       cursor: isCompleted ? 'default' : 'pointer',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      color: '#64C8FF',
+                      color: isCompleted ? '#4CAF50' : '#888',
                       fontSize: '22px',
                       fontWeight: 'bold',
                       transition: 'all 0.3s ease',
                       boxShadow: isCompleted 
-                        ? '0 0 15px rgba(100, 200, 255, 0.6), inset 0 0 10px rgba(100, 200, 255, 0.3)'
+                        ? '0 0 15px rgba(76, 175, 80, 0.6), inset 0 0 10px rgba(76, 175, 80, 0.3)'
                         : '0 2px 5px rgba(0, 0, 0, 0.3)',
                       position: 'relative',
                       zIndex: 1,
@@ -558,26 +569,30 @@ export default function HUD() {
           ))}
         </div>
 
-        {/* Mensaje de advertencia */}
+        {/* Mensaje de advertencia - solo texto */}
         <div style={{
           marginTop: '32px',
           padding: '16px 20px',
-          backgroundColor: 'rgba(255, 80, 80, 0.08)',
-          borderLeft: '4px solid #FF5252',
-          borderRadius: '8px',
           fontSize: '14px',
-          color: '#FFB3B3',
           lineHeight: 1.6,
           fontFamily: "'Rajdhani', sans-serif",
           letterSpacing: '0.5px',
-          boxShadow: '0 0 10px rgba(255, 82, 82, 0.2)',
+          textAlign: 'left',
         }}>
-          <strong style={{ 
+          <span style={{ 
             color: '#FF6B6B',
-            textShadow: '0 0 5px rgba(255, 107, 107, 0.5)',
+            fontWeight: '700',
+            textShadow: '0 0 8px rgba(255, 107, 107, 0.6)',
+            letterSpacing: '1px',
           }}>
-            WARNING:
-          </strong> Failure to complete daily quest may result in appropriate penalty.
+            ADVERTENCIA:
+          </span>
+          <span style={{ 
+            color: '#FFB3B3',
+            marginLeft: '8px',
+          }}>
+            No completar las misiones diarias puede resultar en penalizaciones.
+          </span>
         </div>
       </div>
     </div>
