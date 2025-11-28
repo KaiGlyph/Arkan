@@ -5,7 +5,6 @@ import {
   DISPLAY_NAMES, 
   STATUS_TEXT, 
   STATUS_COLORS, 
-  CATEGORY_COLORS,
   RARITY_COLORS,
   RARITY_NAMES,
   ITEM_CATEGORY_NAMES
@@ -343,130 +342,247 @@ export default function HUD() {
       </div>
 
       {/* 🖼️ Modal de Misiones Diarias */}
-      {modal === 'missions' && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          width: '100%',
-          height: '100%',
-          backgroundColor: 'rgba(0,0,0,0.8)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000,
-        }}>
-          <div style={{
-            backgroundColor: '#25153A',
-            width: '90%',
-            maxWidth: '500px',
-            maxHeight: '80vh',
-            borderRadius: '12px',
-            padding: '24px',
-            overflowY: 'auto',
-          }}>
-            <div style={{ 
-              display: 'flex', 
-              justifyContent: 'space-between', 
-              alignItems: 'center',
-              marginBottom: '20px'
-            }}>
-              <h2 style={{ fontFamily: "'Orbitron', sans-serif", margin: 0 }}>
-                MISIONES DIARIAS
-              </h2>
-              <button onClick={() => setModal(null)} style={{
-                background: 'none',
-                border: 'none',
-                color: '#888',
-                fontSize: '24px',
-                cursor: 'pointer'
-              }}>✕</button>
-            </div>
+{/* 🖼️ Modal de Misiones Diarias - Estilo Solo Leveling */}
+{modal === 'missions' && (
+  <div style={{
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: '100%',
+    backgroundColor: 'rgba(0, 10, 20, 0.92)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1000,
+    backdropFilter: 'blur(10px)',
+  }}>
+    {/* Contenedor principal con efecto holográfico */}
+    <div style={{
+      position: 'relative',
+      width: '90%',
+      maxWidth: '700px',
+      maxHeight: '85vh',
+      overflowY: 'auto',
+    }}>
+      {/* Marco decorativo exterior */}
+      <div style={{
+        position: 'absolute',
+        top: '-10px',
+        left: '-10px',
+        right: '-10px',
+        bottom: '-10px',
+        background: 'linear-gradient(135deg, rgba(100, 200, 255, 0.1) 0%, rgba(150, 100, 255, 0.1) 100%)',
+        borderRadius: '20px',
+        border: '1px solid rgba(100, 200, 255, 0.3)',
+        boxShadow: '0 0 40px rgba(100, 200, 255, 0.2), inset 0 0 20px rgba(0, 0, 0, 0.5)',
+        pointerEvents: 'none',
+      }}></div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {(['exercise', 'mind', 'health', 'productivity'] as const).map(category => (
-                dailyMissions[category] && dailyMissions[category]!.map((habit) => {
-                  const today = new Date().toISOString().split('T')[0];
-                  const isCompleted = habit.lastCompleted === today;
-                  
-                  return (
-                    <div key={habit.id} style={{
-                      backgroundColor: '#33244A',
-                      padding: '16px',
-                      borderRadius: '8px',
-                      border: `2px solid ${CATEGORY_COLORS[category]}`,
-                      opacity: isCompleted ? 0.6 : 1,
+      {/* Esquinas decorativas */}
+      {[
+        { top: '0', left: '0', borderTop: '3px solid #64C8FF', borderLeft: '3px solid #64C8FF' },
+        { top: '0', right: '0', borderTop: '3px solid #64C8FF', borderRight: '3px solid #64C8FF' },
+        { bottom: '0', left: '0', borderBottom: '3px solid #64C8FF', borderLeft: '3px solid #64C8FF' },
+        { bottom: '0', right: '0', borderBottom: '3px solid #64C8FF', borderRight: '3px solid #64C8FF' },
+      ].map((corner, i) => (
+        <div key={i} style={{
+          position: 'absolute',
+          width: '30px',
+          height: '30px',
+          ...corner,
+          zIndex: 10,
+        }}></div>
+      ))}
+
+      {/* Panel principal */}
+      <div style={{
+        position: 'relative',
+        backgroundColor: 'rgba(10, 15, 25, 0.95)',
+        borderRadius: '16px',
+        padding: '40px 32px',
+        border: '1px solid rgba(100, 200, 255, 0.4)',
+        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.6), inset 0 0 60px rgba(0, 100, 200, 0.05)',
+      }}>
+        {/* Header con título GOAL */}
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'center',
+          alignItems: 'center',
+          marginBottom: '40px',
+          position: 'relative',
+        }}>
+          {/* Líneas decorativas laterales */}
+          <div style={{
+            position: 'absolute',
+            width: '100%',
+            height: '2px',
+            background: 'linear-gradient(90deg, transparent 0%, #64C8FF 20%, #64C8FF 80%, transparent 100%)',
+            top: '50%',
+            left: '0',
+          }}></div>
+          
+          <div style={{
+            position: 'relative',
+            backgroundColor: 'rgba(10, 15, 25, 0.9)',
+            padding: '8px 48px',
+            borderRadius: '8px',
+            border: '2px solid #64C8FF',
+            boxShadow: '0 0 20px rgba(100, 200, 255, 0.5), inset 0 0 20px rgba(100, 200, 255, 0.1)',
+          }}>
+            <h2 style={{ 
+              fontFamily: "'Orbitron', 'Rajdhani', sans-serif", 
+              margin: 0,
+              fontSize: '32px',
+              fontWeight: '700',
+              letterSpacing: '6px',
+              color: '#64C8FF',
+              textShadow: '0 0 10px rgba(100, 200, 255, 0.8), 0 0 20px rgba(100, 200, 255, 0.4)',
+              textAlign: 'center',
+            }}>
+              GOAL
+            </h2>
+          </div>
+
+          {/* Botón cerrar */}
+          <button onClick={() => setModal(null)} style={{
+            position: 'absolute',
+            right: '0',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            background: 'rgba(100, 200, 255, 0.1)',
+            border: '2px solid #64C8FF',
+            color: '#64C8FF',
+            fontSize: '24px',
+            cursor: 'pointer',
+            padding: '4px 12px',
+            borderRadius: '6px',
+            fontWeight: 'bold',
+            transition: 'all 0.3s ease',
+          }}>✕</button>
+        </div>
+
+        {/* Lista de misiones */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          {(['exercise', 'mind', 'health', 'productivity'] as const).map(category => (
+            dailyMissions[category] && dailyMissions[category]!.map((habit) => {
+              const today = new Date().toISOString().split('T')[0];
+              const isCompleted = habit.lastCompleted === today;
+              
+              return (
+                <div key={habit.id} style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '18px 24px',
+                  backgroundColor: 'rgba(20, 30, 45, 0.6)',
+                  borderRadius: '10px',
+                  border: `1px solid ${isCompleted ? 'rgba(100, 200, 255, 0.4)' : 'rgba(100, 150, 200, 0.2)'}`,
+                  boxShadow: isCompleted 
+                    ? '0 0 15px rgba(100, 200, 255, 0.3), inset 0 0 15px rgba(100, 200, 255, 0.05)'
+                    : '0 2px 8px rgba(0, 0, 0, 0.3)',
+                  transition: 'all 0.3s ease',
+                  position: 'relative',
+                  overflow: 'hidden',
+                }}>
+                  {/* Efecto de brillo de fondo */}
+                  {isCompleted && (
+                    <div style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      background: 'linear-gradient(90deg, transparent 0%, rgba(100, 200, 255, 0.1) 50%, transparent 100%)',
+                      animation: 'shimmer 2s infinite',
+                    }}></div>
+                  )}
+
+                  {/* Contenido de la misión */}
+                  <div style={{ flex: 1, position: 'relative', zIndex: 1 }}>
+                    <div style={{ 
+                      fontFamily: "'Rajdhani', 'Roboto', sans-serif",
+                      fontWeight: '600', 
+                      fontSize: '20px',
+                      marginBottom: '6px',
+                      color: isCompleted ? 'rgba(100, 200, 255, 0.7)' : '#E0F2FF',
+                      letterSpacing: '0.5px',
+                      textShadow: isCompleted ? 'none' : '0 0 5px rgba(100, 200, 255, 0.3)',
+                      textDecoration: isCompleted ? 'line-through' : 'none',
+                    }}>
+                      {habit.name}
+                    </div>
+                    <div style={{ 
+                      fontSize: '14px', 
+                      color: isCompleted ? 'rgba(150, 200, 255, 0.5)' : '#90CAF9',
+                      fontWeight: '500',
+                      fontFamily: "'Rajdhani', sans-serif",
+                      letterSpacing: '1px',
+                    }}>
+                      [{XP_BY_DIFFICULTY[habit.difficulty]}/{XP_BY_DIFFICULTY[habit.difficulty]}]
+                    </div>
+                  </div>
+
+                  {/* Checkbox estilo holográfico */}
+                  <button
+                    onClick={() => toggleHabit(habit.id)}
+                    disabled={isCompleted}
+                    style={{
+                      width: '40px',
+                      height: '40px',
+                      minWidth: '40px',
+                      minHeight: '40px',
+                      borderRadius: '6px',
+                      border: `2px solid ${isCompleted ? '#64C8FF' : 'rgba(100, 150, 200, 0.5)'}`,
+                      backgroundColor: isCompleted ? 'rgba(100, 200, 255, 0.2)' : 'rgba(30, 40, 60, 0.5)',
+                      cursor: isCompleted ? 'default' : 'pointer',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '16px',
-                    }}>
-                      {/* Checkbox estilo imagen */}
-                      <button
-                        onClick={() => toggleHabit(habit.id)}
-                        disabled={isCompleted}
-                        style={{
-                          width: '32px',
-                          height: '32px',
-                          minWidth: '32px',
-                          minHeight: '32px',
-                          borderRadius: '50%',
-                          border: `3px solid ${isCompleted ? '#4CAF50' : '#666'}`,
-                          backgroundColor: isCompleted ? '#4CAF50' : 'transparent',
-                          cursor: isCompleted ? 'default' : 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          color: 'white',
-                          fontSize: '16px',
-                          fontWeight: 'bold',
-                          transition: 'all 0.3s ease',
-                        }}
-                      >
-                        {isCompleted ? '✓' : ''}
-                      </button>
-
-                      {/* Contenido de la misión */}
-                      <div style={{ flex: 1 }}>
-                        <div style={{ 
-                          fontSize: '11px', 
-                          opacity: 0.7, 
-                          marginBottom: '4px',
-                          textTransform: 'uppercase',
-                          letterSpacing: '0.5px',
-                        }}>
-                          {isCompleted ? 'MISIÓN SECUNDARIA' : 'MISIÓN PRINCIPAL'}
-                        </div>
-                        <div style={{ 
-                          fontWeight: 'bold', 
-                          fontSize: '16px',
-                          marginBottom: '4px',
-                        }}>
-                          {habit.name}
-                        </div>
-                        <div style={{ 
-                          fontSize: '12px', 
-                          color: '#FFD93D',
-                        }}>
-                          +{XP_BY_DIFFICULTY[habit.difficulty]} XP
-                        </div>
-                        {isCompleted && (
-                          <div style={{ 
-                            fontSize: '10px', 
-                            color: '#4CAF50', 
-                            marginTop: '4px',
-                          }}>
-                            Completado hoy
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })
-              ))}
-            </div>
-          </div>
+                      justifyContent: 'center',
+                      color: '#64C8FF',
+                      fontSize: '22px',
+                      fontWeight: 'bold',
+                      transition: 'all 0.3s ease',
+                      boxShadow: isCompleted 
+                        ? '0 0 15px rgba(100, 200, 255, 0.6), inset 0 0 10px rgba(100, 200, 255, 0.3)'
+                        : '0 2px 5px rgba(0, 0, 0, 0.3)',
+                      position: 'relative',
+                      zIndex: 1,
+                    }}
+                  >
+                    {isCompleted ? '✓' : ''}
+                  </button>
+                </div>
+              );
+            })
+          ))}
         </div>
-      )}
+
+        {/* Mensaje de advertencia */}
+        <div style={{
+          marginTop: '32px',
+          padding: '16px 20px',
+          backgroundColor: 'rgba(255, 80, 80, 0.08)',
+          borderLeft: '4px solid #FF5252',
+          borderRadius: '8px',
+          fontSize: '14px',
+          color: '#FFB3B3',
+          lineHeight: 1.6,
+          fontFamily: "'Rajdhani', sans-serif",
+          letterSpacing: '0.5px',
+          boxShadow: '0 0 10px rgba(255, 82, 82, 0.2)',
+        }}>
+          <strong style={{ 
+            color: '#FF6B6B',
+            textShadow: '0 0 5px rgba(255, 107, 107, 0.5)',
+          }}>
+            WARNING:
+          </strong> Failure to complete daily quest may result in appropriate penalty.
+        </div>
+      </div>
+    </div>
+  </div>
+)}
 
       {/* 🖼️ Modal de Inventario */}
       {modal === 'inventory' && (
