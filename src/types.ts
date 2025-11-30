@@ -1,58 +1,13 @@
 // src/types.ts
-
-export type HabitCategory = 
-  | 'exercise'      // → Fuerza
-  | 'mobility'      // → Agilidad (nuevo)
-  | 'health'        // → Vitalidad
-  | 'mind'          // → Inteligencia
-  | 'productivity'  // → Percepción
-  | 'discipline';   // → Sense (nuevo)
-
 export type HabitDifficulty = 'easy' | 'medium' | 'hard';
-export type HabitFrequency = 'daily' | 'weekly';
-
-// ✅ Stats reales (renombrados para claridad)
-export type StatName = 
-  | 'fuerza'
-  | 'agilidad'
-  | 'vitalidad'
-  | 'inteligencia'
-  | 'percepcion'
-  | 'sense';
-
-// 🔁 Alias para compatibilidad (opcional, pero ayuda en migración)
-export type RealAttribute = StatName;
-
-// 👇 Añade estos tipos nuevos
+export type HabitCategory = 'exercise' | 'mobility' | 'health' | 'mind' | 'productivity' | 'discipline';
+export type HabitFrequency = 'daily' | 'weekly' | 'custom';
+export type StatName = 'fuerza' | 'agilidad' | 'vitalidad' | 'inteligencia' | 'percepcion' | 'sense';
+export type UserStatus = 'activo' | 'cansado' | 'motivado' | 'estresado';
 export type ItemRarity = 'normal' | 'raro' | 'elite' | 'legendario';
-
-export type ItemCategory = 
-  | 'herramientas'
-  | 'documentos'
-  | 'personales'
-  | 'ropa'
-  | 'libros'
-  | 'cursos';
-
-export interface InventoryItem {
-  id: string;
-  name: string;
-  description: string;
-  category: ItemCategory;
-  rarity: ItemRarity;
-  dateAcquired: string;
-  bonus?: {
-    stat: StatName;      // ✅ stat, no attribute
-    value: number;
-    description: string;
-  };
-}
-
-export interface Illness {
-  id: string;
-  name: string;
-  penalties: Partial<Record<StatName, number>>;
-}
+export type ItemCategory = 'consumible' | 'especial' | 'equipamiento' | 'herramientas' | 'documentos' | 'personales' | 'ropa' | 'libros' | 'cursos';
+export type TitleRarity = 'comun' | 'raro' | 'epico' | 'legendario';
+export type TitleCategory = 'inicial' | 'racha' | 'nivel' | 'especial' | 'legendario';
 
 export interface Habit {
   id: string;
@@ -64,14 +19,52 @@ export interface Habit {
   lastCompleted: string | null;
 }
 
-// ✅ Recompensa flexible (daily missions, level up, quests)
-export interface StatReward {
+export interface Reward {
   id: string;
-  type: 'dailyMissions' | 'levelUp' | 'quest';
+  type: 'levelUp' | 'dailyMissions' | 'quest';
   description: string;
-  stats: Partial<Record<StatName, number>> & { points?: number }; // points = asignables
+  stats: Partial<Record<StatName, number>> & { points?: number };
   createdAt: string;
   claimedAt?: string;
+}
+
+export interface InventoryItem {
+  id: string;
+  name: string;
+  description: string;
+  category: ItemCategory;
+  rarity: ItemRarity;
+  effect?: {
+    type: 'xp_boost' | 'shield_penalty' | 'time_rewind' | 'duplicate_reward' | 'reroll_missions' | 'streak_protection';
+    value?: number;
+    description: string;
+  };
+  consumable?: boolean;
+  unique?: boolean;
+  quantity?: number;
+  dateAcquired: string;
+}
+
+export interface Title {
+  id: string;
+  name: string;
+  description: string;
+  category: TitleCategory;
+  rarity: TitleRarity;
+  requirement: {
+    type: 'streak' | 'level' | 'special' | 'initial';
+    value?: number;
+    description: string;
+  };
+  bonus: {
+    xpMultiplier?: number;
+    energyBoost?: number;
+    stats?: Partial<Record<StatName, number>>;
+    description: string;
+  };
+  icon: string;
+  unlocked: boolean;
+  unlockedAt?: string;
 }
 
 export interface UserState {
@@ -81,12 +74,16 @@ export interface UserState {
   attributes: Record<StatName, number>;
   energy: number;
   health: number;
-  status: 'activo' | 'cansado' | 'motivado' | 'estresado';
-  illnesses: Illness[];
+  status: UserStatus;
+  illnesses: string[];
   inventory: InventoryItem[];
   name: string;
   age: number;
   title: string;
+  bio: string;
+  streakHistory: string[];
   updatedAt: string;
-  unclaimedRewards: StatReward[];
+  unclaimedRewards: Reward[];
+  titles: Title[];
+  activeTitle: string | null;
 }

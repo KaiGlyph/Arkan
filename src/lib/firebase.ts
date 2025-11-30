@@ -1,17 +1,26 @@
-import { initializeApp } from 'firebase/app';
+import { initializeApp, getApp, getApps } from 'firebase/app';
+import { getAuth, setPersistence, browserLocalPersistence } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
-import { getAuth } from 'firebase/auth';
 
-// ⚠️ Usa Vite's env
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID
+  apiKey: "AIzaSyAiqbGAzrMqXhR1zLVVU67o2KBK9aG-qMc",
+  authDomain: "arkan-protocol.firebaseapp.com",
+  projectId: "arkan-protocol",
+  appId: "arkan-protocol.firebasestorage.app",
+  storageBucket: "789239543078",
+  messagingSenderId: "1:789239543078:web:5bc93f03acd5ecefb73de7",
 };
 
-const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app);
-export const auth = getAuth(app);
+// Evita reinicializar en HMR
+const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+
+// Auth con persistencia local (mantiene sesión al recargar)
+const auth = getAuth(app);
+setPersistence(auth, browserLocalPersistence).catch(() => {
+  // Ignorar errores de persistencia en entornos restringidos
+});
+
+// Firestore
+const db = getFirestore(app);
+
+export { app, auth, db };
