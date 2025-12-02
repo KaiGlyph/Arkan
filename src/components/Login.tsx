@@ -75,7 +75,7 @@ export default function Login() {
           placeholder="••••••••"
           autoComplete="current-password"
           style={{
-            width: '100%', padding: '10px 12px', marginBottom: 12,
+            width: '100%', padding: '10px 12px', marginBottom: 12, boxSizing: 'border-box',
             background: '#1a1330', color: 'white', border: '1px solid #6f56b8'
           }}
         />

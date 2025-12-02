@@ -29,6 +29,23 @@ const SPECIAL_TITLE_REWARDS: Record<string, Omit<InventoryItem, 'id' | 'dateAcqu
   favor_del_sistema: ITEM_CATALOG.potion_xp_supreme,
 };
 
+// ✅ Función para verificar si todas las misiones están completadas HOY
+const areAllMissionsCompletedToday = (habits: Habit[]): boolean => {
+  const today = new Date().toISOString().split('T')[0];
+  const allCategories = Object.keys(ATTRIBUTE_BY_CATEGORY) as HabitCategory[];
+  const now = new Date();
+  const startOfYear = new Date(now.getFullYear(), 0, 0);
+  const dayOfYear = Math.floor((now.getTime() - startOfYear.getTime()) / 86400000);
+
+  return allCategories.every(cat => {
+    const allHabits = habits.filter(h => h.category === cat);
+    if (allHabits.length === 0) return false;
+    const missionIndex = dayOfYear % allHabits.length;
+    const selectedHabit = allHabits[missionIndex];
+    return selectedHabit.lastCompleted === today;
+  });
+};
+
 // Función auxiliar para calcular racha desde historial
 const calculateCurrentStreak = (history: string[]): number => {
   const sortedHistory = [...history].sort((a, b) => 
@@ -55,7 +72,6 @@ const calculateCurrentStreak = (history: string[]): number => {
 };
 
 export const useHabits = () => {
-
   const getInitialState = (): UserState => ({
     totalXP: 0,
     habits: DEFAULT_HABITS,
@@ -201,52 +217,6 @@ export const useHabits = () => {
     }
   }, []);
 
-  
-
-  // 🏆 Verificar y desbloquear títulos
-  const checkAndUnlockTitles = useCallback((newState: UserState, currentStreak: number): UserState => {
-    let updatedTitles = [...newState.titles];
-    let hasNewUnlocks = false;
-
-    updatedTitles = updatedTitles.map(title => {
-      if (title.unlocked) return title;
-
-      let shouldUnlock = false;
-
-      switch (title.requirement.type) {
-        case 'initial':
-          shouldUnlock = true;
-          break;
-        case 'streak':
-          shouldUnlock = currentStreak >= (title.requirement.value || 0);
-          break;
-        case 'level':
-          shouldUnlock = newState.level >= (title.requirement.value || 0);
-          break;
-        case 'special':
-          // Implementar lógica especial en el futuro
-          break;
-      }
-
-      if (shouldUnlock) {
-        hasNewUnlocks = true;
-        return {
-          ...title,
-          unlocked: true,
-          unlockedAt: new Date().toISOString(),
-        };
-      }
-
-      return title;
-    });
-
-    if (hasNewUnlocks) {
-      return { ...newState, titles: updatedTitles };
-    }
-
-    return newState;
-  }, []);
-
   // 🏆 Aplicar bonus del título activo
   const applyTitleBonus = useCallback((baseXP: number): number => {
     const activeTitle = state.titles.find(t => t.id === state.activeTitle);
@@ -284,139 +254,7 @@ export const useHabits = () => {
     });
   }, [state, saveState]);
 
-  const claimReward = useCallback((rewardId: string, assignedStats?: Partial<Record<StatName, number>>) => {
-    const reward = state.unclaimedRewards.find(r => r.id === rewardId);
-    if (!reward) return;
-
-    let newAttributes = { ...state.attributes };
-    let newUnclaimedRewards = state.unclaimedRewards.filter(r => r.id !== rewardId);
-
-    if (reward.type === 'dailyMissions' && reward.stats.points) {
-      if (assignedStats) {
-        (Object.keys(assignedStats) as StatName[]).forEach(stat => {
-          newAttributes[stat] += assignedStats[stat] || 0;
-        });
-        newUnclaimedRewards.push({
-          ...reward,
-          claimedAt: new Date().toISOString(),
-          stats: assignedStats,
-        });
-      }
-    } else {
-      (Object.keys(reward.stats) as (StatName | 'points')[]).forEach(stat => {
-        if (stat !== 'points') {
-          newAttributes[stat as StatName] += reward.stats[stat] || 0;
-        }
-      });
-      newUnclaimedRewards.push({
-        ...reward,
-        claimedAt: new Date().toISOString(),
-      });
-    }
-
-    saveState({ ...state, attributes: newAttributes, unclaimedRewards: newUnclaimedRewards });
-  }, [state, saveState]);
-
-  const toggleHabit = useCallback((habitId: string, onAllCompleted?: (rewardId: string, points: number) => void) => {
-    const today = new Date().toISOString().split('T')[0];
-    const habit = state.habits.find(h => h.id === habitId);
-    if (!habit || habit.lastCompleted === today) return;
-
-    const yesterday = new Date(Date.now() - 864e5).toISOString().split('T')[0];
-    const newStreak = habit.lastCompleted === yesterday ? habit.streak + 1 : 1;
-    const energyCost = ENERGY_COST[habit.difficulty];
-    const healthGain = habit.category === 'health' ? 2 : 
-                      habit.category === 'exercise' || habit.category === 'mobility' ? 1 : 0;
-
-    const baseXP = XP_BY_DIFFICULTY[habit.difficulty];
-    const xpReward = applyTitleBonus(baseXP);
-    const newTotalXP = state.totalXP + xpReward;
-    const newLevel = calculateLevel(newTotalXP);
-    const levelUp = newLevel > state.level;
-
-    const updatedHabit: Habit = { ...habit, streak: newStreak, lastCompleted: today };
-    const newHabits = state.habits.map(h => h.id === habitId ? updatedHabit : h);
-
-    let newAttributes = { ...state.attributes };
-    let newUnclaimedRewards = [...state.unclaimedRewards];
-
-    if (levelUp) {
-      Object.keys(newAttributes).forEach(stat => {
-        newAttributes[stat as StatName] += 1;
-      });
-      newUnclaimedRewards.push({
-        id: `levelup-${newLevel}`,
-        type: 'levelUp',
-        description: `¡Nivel ${newLevel}! +1 en todas las estadísticas`,
-        stats: {
-          fuerza: 1, agilidad: 1, vitalidad: 1,
-          inteligencia: 1, percepcion: 1, sense: 1
-        },
-        createdAt: new Date().toISOString(),
-        claimedAt: new Date().toISOString(),
-      });
-    }
-
-    const allCategories = Object.keys(ATTRIBUTE_BY_CATEGORY) as HabitCategory[];
-    const now = new Date();
-    const startOfYear = new Date(now.getFullYear(), 0, 0);
-    const dayOfYear = Math.floor((now.getTime() - startOfYear.getTime()) / 86400000);
-    
-    const allCompleted = allCategories.every(cat => {
-      const allHabits = state.habits.filter(h => h.category === cat);
-      if (allHabits.length === 0) return false;
-      const missionIndex = dayOfYear % allHabits.length;
-      const selectedHabit = allHabits[missionIndex];
-      return selectedHabit.lastCompleted === today;
-    });
-
-    let newStreakHistory = [...(state.streakHistory || [])];
-    if (allCompleted && !newStreakHistory.includes(today)) {
-      newStreakHistory.push(today);
-    }
-    
-    let newRewardId: string | null = null;
-    const pointsReward = 3;
-    if (allCompleted && !newUnclaimedRewards.some(r => 
-      r.type === 'dailyMissions' && 
-      r.createdAt.split('T')[0] === today
-    )) {
-      newRewardId = `daily-${today}`;
-      newUnclaimedRewards.push({
-        id: newRewardId,
-        type: 'dailyMissions',
-        description: '✅ Misiones diarias completas',
-        stats: { points: pointsReward },
-        createdAt: new Date().toISOString(),
-      });
-    }
-
-    let newState: UserState = {
-      ...state,
-      totalXP: newTotalXP,
-      level: newLevel,
-      habits: newHabits,
-      attributes: newAttributes,
-      unclaimedRewards: newUnclaimedRewards,
-      streakHistory: newStreakHistory,
-      energy: Math.max(0, Math.min(100, state.energy - energyCost)),
-      health: Math.max(0, Math.min(100, state.health + healthGain)),
-      status: state.energy < 30 ? 'cansado' : state.energy > 85 ? 'motivado' : 'activo',
-    };
-
-    // Verificar títulos después de completar la misión
-    const currentStreak = calculateCurrentStreak(newStreakHistory);
-    newState = checkAndUnlockTitles(newState, currentStreak);
-
-    saveState(newState);
-    
-    if (allCompleted && newRewardId && onAllCompleted) {
-      setTimeout(() => {
-        onAllCompleted(newRewardId!, pointsReward);
-      }, 100);
-    }
-  }, [state, saveState, applyTitleBonus, checkAndUnlockTitles]);
-
+  // ✅ 1. addItem debe ir PRIMERO (usado por grantRandomItem y checkSpecialTitles)
   const addItem = useCallback((item: Omit<InventoryItem, 'id' | 'dateAcquired'>) => {
     const newItem: InventoryItem = {
       ...item,
@@ -449,7 +287,30 @@ export const useHabits = () => {
     saveState({ ...state, inventory: [...state.inventory, newItem] });
   }, [state, saveState]);
 
-  // 🎯 Función para verificar misiones especiales (logros únicos)
+  // ✅ 2. grantRandomItem debe ir DESPUÉS de addItem (usa addItem)
+  const grantRandomItem = useCallback(() => {
+    const roll = Math.random() * 100;
+    let itemKey: keyof typeof ITEM_CATALOG;
+    
+    if (roll < 2) {
+      itemKey = Math.random() < 0.5 ? 'shield_forgiveness' : 'streak_crystal';
+    } else if (roll < 10) {
+      const epics = ['potion_xp_supreme', 'time_clock', 'reroll_gem'] as const;
+      itemKey = epics[Math.floor(Math.random() * epics.length)];
+    } else if (roll < 30) {
+      const rares = ['potion_xp_major', 'duplicate_scroll'] as const;
+      itemKey = rares[Math.floor(Math.random() * rares.length)];
+    } else {
+      itemKey = 'potion_xp_minor';
+    }
+    
+    const itemTemplate = ITEM_CATALOG[itemKey];
+    addItem(itemTemplate);
+    
+    return itemTemplate.name;
+  }, [addItem]);
+
+  // ✅ 3. checkSpecialTitles va DESPUÉS de addItem y grantRandomItem
   const checkSpecialTitles = useCallback((newState: UserState): UserState => {
     let updatedTitles = [...newState.titles];
     let hasNewUnlocks = false;
@@ -478,12 +339,12 @@ export const useHabits = () => {
       }
     };
 
-    // 🔍 Favor del Sistema: abrir buzón el 1 de enero entre 00:00 y 00:05
+    // 🔍 Favor del Sistema: 1 de enero, 00:00–00:05
     const now = new Date();
     const isJan1 = now.getDate() === 1 && now.getMonth() === 0; // Enero = 0
     const hour = now.getHours();
     const minute = now.getMinutes();
-    const isMidnightWindow = hour === 0 && minute < 6; // 00:00 a 00:05
+    const isMidnightWindow = hour === 0 && minute < 6;
 
     if (
       isJan1 &&
@@ -492,11 +353,10 @@ export const useHabits = () => {
     ) {
       unlockTitle('favor_del_sistema');
 
-      // 🎁 Bonus adicional: ítem aleatorio como regalo del Sistema
+      // 🎁 Bonus: ítem aleatorio como regalo del Sistema
       const itemName = grantRandomItem();
       console.log(`🎁 ¡El Sistema te ha otorgado: ${itemName}!`);
 
-      // 🔔 Notificación opcional (mejor que console.log en móvil)
       if (typeof window !== 'undefined' && Notification.permission === 'granted') {
         new Notification('🎁 ¡Regalo del Sistema!', {
           body: `¡Has recibido: ${itemName}!`,
@@ -506,7 +366,153 @@ export const useHabits = () => {
     }
 
     return hasNewUnlocks ? { ...newState, titles: updatedTitles } : newState;
-  }, [addItem]);
+  }, [addItem, grantRandomItem]);
+
+  // 🏆 Verificar y desbloquear títulos (por racha/nivel)
+  const checkAndUnlockTitles = useCallback((newState: UserState, currentStreak: number): UserState => {
+    let updatedTitles = [...newState.titles];
+    let hasNewUnlocks = false;
+
+    updatedTitles = updatedTitles.map(title => {
+      if (title.unlocked) return title;
+
+      let shouldUnlock = false;
+
+      switch (title.requirement.type) {
+        case 'initial': shouldUnlock = true; break;
+        case 'streak': shouldUnlock = currentStreak >= (title.requirement.value || 0); break;
+        case 'level': shouldUnlock = newState.level >= (title.requirement.value || 0); break;
+        case 'special': break; // manejado en checkSpecialTitles
+      }
+
+      if (shouldUnlock) {
+        hasNewUnlocks = true;
+        return { ...title, unlocked: true, unlockedAt: new Date().toISOString() };
+      }
+      return title;
+    });
+
+    return hasNewUnlocks ? { ...newState, titles: updatedTitles } : newState;
+  }, []);
+
+  // ✅ 4. toggleHabit: ahora llama a grantRandomItem al completar todas las misiones
+  const toggleHabit = useCallback((habitId: string, onAllCompleted?: (rewardId: string, points: number) => void) => {
+    const today = new Date().toISOString().split('T')[0];
+    const habit = state.habits.find(h => h.id === habitId);
+    if (!habit || habit.lastCompleted === today) return;
+
+    const yesterday = new Date(Date.now() - 864e5).toISOString().split('T')[0];
+    const newStreak = habit.lastCompleted === yesterday ? habit.streak + 1 : 1;
+    const energyCost = ENERGY_COST[habit.difficulty];
+    const healthGain = habit.category === 'health' ? 2 : 
+                      habit.category === 'exercise' || habit.category === 'mobility' ? 1 : 0;
+
+    const baseXP = XP_BY_DIFFICULTY[habit.difficulty];
+    const xpReward = applyTitleBonus(baseXP);
+    const newTotalXP = state.totalXP + xpReward;
+    const newLevel = calculateLevel(newTotalXP);
+    const levelUp = newLevel > state.level;
+
+    const updatedHabit: Habit = { ...habit, streak: newStreak, lastCompleted: today };
+    const newHabits = state.habits.map(h => h.id === habitId ? updatedHabit : h);
+
+    let newAttributes = { ...state.attributes };
+    let newUnclaimedRewards = [...state.unclaimedRewards];
+
+    if (levelUp) {
+      Object.keys(newAttributes).forEach(stat => {
+        newAttributes[stat as StatName] += 1;
+      });
+      newUnclaimedRewards.push({
+        id: `levelup-${newLevel}`,
+        type: 'levelUp',
+        description: `¡Nivel ${newLevel}! +1 en todas las estadísticas`,
+        stats: { fuerza: 1, agilidad: 1, vitalidad: 1, inteligencia: 1, percepcion: 1, sense: 1 },
+        createdAt: new Date().toISOString(),
+        claimedAt: new Date().toISOString(),
+      });
+    }
+
+    const allCompleted = areAllMissionsCompletedToday(newHabits);
+
+    let newStreakHistory = [...(state.streakHistory || [])];
+    if (allCompleted && !newStreakHistory.includes(today)) {
+      newStreakHistory.push(today);
+    }
+    
+    let newRewardId: string | null = null;
+    const pointsReward = 3;
+    if (allCompleted && !newUnclaimedRewards.some(r => 
+      r.type === 'dailyMissions' && 
+      r.createdAt.split('T')[0] === today
+    )) {
+      newRewardId = `daily-${today}`;
+      newUnclaimedRewards.push({
+        id: newRewardId,
+        type: 'dailyMissions',
+        description: 'Misiones diarias completas',
+        stats: { points: pointsReward },
+        createdAt: new Date().toISOString(),
+      });
+
+      // ✅ Ítem aleatorio garantizado al completar todas las misiones
+      if (allCompleted) {
+        grantRandomItem(); // ← Esto añade el ítem al `inventory` mediante `addItem`
+      }
+    }
+
+    let newState: UserState = {
+      ...state,
+      totalXP: newTotalXP,
+      level: newLevel,
+      habits: newHabits,
+      attributes: newAttributes,
+      unclaimedRewards: newUnclaimedRewards,
+      streakHistory: newStreakHistory,
+      energy: Math.max(0, Math.min(100, state.energy - energyCost)),
+      health: Math.max(0, Math.min(100, state.health + healthGain)),
+      status: state.energy < 30 ? 'cansado' : state.energy > 85 ? 'motivado' : 'activo',
+    };
+
+    // Verificar títulos después de completar la misión
+    const currentStreak = calculateCurrentStreak(newStreakHistory);
+    newState = checkAndUnlockTitles(newState, currentStreak);
+    newState = checkSpecialTitles(newState);
+
+    saveState(newState);
+    
+    if (allCompleted && newRewardId && onAllCompleted) {
+      setTimeout(() => {
+        onAllCompleted(newRewardId!, pointsReward);
+      }, 100);
+    }
+  }, [state, saveState, applyTitleBonus, checkAndUnlockTitles, checkSpecialTitles, grantRandomItem]);
+
+  const claimReward = useCallback((rewardId: string, assignedStats?: Partial<Record<StatName, number>>) => {
+    const reward = state.unclaimedRewards.find(r => r.id === rewardId);
+    if (!reward) return;
+
+    let newAttributes = { ...state.attributes };
+    let newUnclaimedRewards = state.unclaimedRewards.filter(r => r.id !== rewardId);
+
+    if (reward.type === 'dailyMissions' && reward.stats.points) {
+      if (assignedStats) {
+        (Object.keys(assignedStats) as StatName[]).forEach(stat => {
+          newAttributes[stat] += assignedStats[stat] || 0;
+        });
+        newUnclaimedRewards.push({ ...reward, claimedAt: new Date().toISOString(), stats: assignedStats });
+      }
+    } else {
+      (Object.keys(reward.stats) as (StatName | 'points')[]).forEach(stat => {
+        if (stat !== 'points') {
+          newAttributes[stat as StatName] += reward.stats[stat] || 0;
+        }
+      });
+      newUnclaimedRewards.push({ ...reward, claimedAt: new Date().toISOString() });
+    }
+
+    saveState({ ...state, attributes: newAttributes, unclaimedRewards: newUnclaimedRewards });
+  }, [state, saveState]);
 
   const removeItem = useCallback((itemId: string, quantity = 1) => {
     const item = state.inventory.find(i => i.id === itemId);
@@ -546,10 +552,7 @@ export const useHabits = () => {
             id: `levelup-${newLevel}`,
             type: 'levelUp',
             description: `¡Nivel ${newLevel}! +1 en todas las estadísticas`,
-            stats: {
-              fuerza: 1, agilidad: 1, vitalidad: 1,
-              inteligencia: 1, percepcion: 1, sense: 1
-            },
+            stats: { fuerza: 1, agilidad: 1, vitalidad: 1, inteligencia: 1, percepcion: 1, sense: 1 },
             createdAt: new Date().toISOString(),
             claimedAt: new Date().toISOString(),
           });
@@ -574,33 +577,9 @@ export const useHabits = () => {
     saveState(newState);
   }, [state, saveState]);
 
-  const grantRandomItem = useCallback(() => {
-    const roll = Math.random() * 100;
-    let itemKey: keyof typeof ITEM_CATALOG;
-    
-    if (roll < 2) {
-      itemKey = Math.random() < 0.5 ? 'shield_forgiveness' : 'streak_crystal';
-    } else if (roll < 10) {
-      const epics = ['potion_xp_supreme', 'time_clock', 'reroll_gem'] as const;
-      itemKey = epics[Math.floor(Math.random() * epics.length)];
-    } else if (roll < 30) {
-      const rares = ['potion_xp_major', 'duplicate_scroll'] as const;
-      itemKey = rares[Math.floor(Math.random() * rares.length)];
-    } else {
-      itemKey = 'potion_xp_minor';
-    }
-    
-    const itemTemplate = ITEM_CATALOG[itemKey];
-    addItem(itemTemplate);
-    
-    return itemTemplate.name;
-  }, [addItem]);
-
   const updateProfile = useCallback((newProfile: { name: string; age: number; title: string; bio: string }) => {
     saveState({ ...state, ...newProfile });
   }, [state, saveState]);
-
-
 
   const calculateSuccessRate = useCallback(() => {
     const last30Days: string[] = [];
