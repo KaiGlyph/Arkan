@@ -1,4 +1,5 @@
 /* src/index.css */
+
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
@@ -6,7 +7,7 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: #0A0514;
+  background: #0A0514; /* Fondo principal */
   color: white;
   min-height: 100vh;
   display: flex;
@@ -17,10 +18,10 @@ body {
   overflow-y: hidden;
 }
 
+/* 🔹 #root ocupa todo el ancho en escritorio */
 #root {
   width: 100%;
   max-height: 60vh;
-  max-width: 1200px;
   margin: 0 auto;
   padding: clamp(0px, 3vw, 0px);
   box-sizing: border-box;
@@ -33,5 +34,50 @@ body {
     max-width: none;
     margin: 0;
     padding: clamp(12px, 3vw, 12px);
+  }
+  body {
+    overflow-y: auto;
+  }
+}
+
+/* ===== Ajuste específico para el login ===== */
+.login-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent; /* ✅ Elimina el fondo extra */
+  color: white;
+  padding: 16px;
+}
+
+/* ✅ En escritorio, centra el formulario visualmente */
+@media (min-width: 769px) {
+  .login-container {
+    /* Hacemos que el contenedor sea un flex que centre el contenido */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 32px;
+  }
+
+  .login-container > div {
+    width: 100%;
+    max-width: 380px; /* el formulario sigue siendo compacto */
+    margin: 0 auto; /* ⚠️ Esto ya no es necesario si usamos flex */
+    /* Pero lo dejamos por compatibilidad */
+  }
+}
+
+@media (max-width: 768px) {
+  .login-container {
+    align-items: flex-start;
+    padding-top: clamp(32px, 8vh, 60px);
+    padding-bottom: clamp(32px, 8vh, 60px);
+  }
+
+  .login-container > div {
+    width: 100%;
+    max-width: 100%;
   }
 }

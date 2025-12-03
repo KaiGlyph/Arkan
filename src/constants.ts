@@ -489,6 +489,8 @@ export const EPIC_THEME = {
     accentGlow: 'rgba(177, 140, 255, 0.4)',
     rarity: RARITY_COLORS,
     status: STATUS_COLORS,
+    systemAlert: '#FF5252',
+    systemAlertGlow: 'rgba(255, 82, 82, 0.6)',
   },
   typography: {
     heading: "'Orbitron', sans-serif",

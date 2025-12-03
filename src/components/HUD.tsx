@@ -13,6 +13,9 @@ import {
   TITLE_RARITY_NAMES,
 } from '../constants';
 import type { StatName} from '../types';
+import SystemLoader from '../components/SystemLoader';
+import SessionShutdown from '../components/SessionShutdown';
+
 
 // ✅ Contenedor de tarjeta estable
 const EpicCard = memo(function EpicCard({ 
@@ -236,6 +239,7 @@ const ProfileModal = memo(function ProfileModal({
 
 // ✅ Componente principal
 function HUD() {
+  const [loaded, setLoaded] = useState(false);
   const { signOut } = useAuth();
   const {
     level, xpProgress, xpToNextLevel, progressPercent,
@@ -250,6 +254,7 @@ function HUD() {
   } = useHabits();
 
   const [modal, setModal] = useState<null | 'missions' | 'inventory' | 'titles' | 'pets' | 'profile' | 'mailbox'>(null);
+  const [sessionShutdownVisible, setSessionShutdownVisible] = useState(false);
   const [assigningPoints, setAssigningPoints] = useState<{ rewardId: string; points: number } | null>(null);
   const [pointAssignment, setPointAssignment] = useState<Partial<Record<StatName, number>>>({});
   const [inventoryFilter, setInventoryFilter] = useState<'all' | 'consumible' | 'especial'>('all');
@@ -320,6 +325,10 @@ function HUD() {
     ...titles.filter(t => t.unlocked).map(t => ({ id: t.id, name: t.name })),
   ];
 
+  if (!loaded) {
+    return <SystemLoader onReady={() => setLoaded(true)} />;
+  }
+
   return (
     <div style={{ 
       backgroundColor: '#0A0514', 
@@ -384,33 +393,35 @@ function HUD() {
       position: 'relative'
     }}>
       {/* Botón Cerrar sesión — Portal de Salida */}
-      <button
-        onClick={() => signOut()}
-        aria-label="Cerrar sesión"
-        title="Cerrar sesión"
-        style={{
-          position: 'absolute',
-          top: 12,
-          left: 12,
-          background: 'transparent',
-          border: 'none',
-          cursor: 'pointer',
-          width: 28,
-          height: 28,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: 0,
-          filter: 'drop-shadow(0 0 6px rgba(255, 107, 107, 0.7))',
-        }}
-      >
-        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#FF6B6B" strokeWidth="1.8">
-          {/* Marco cuadrado (puerta) */}
-          <rect x="3" y="4" width="18" height="16" rx="2" ry="2" />
-          {/* Símbolo de salida (X dentro de un círculo) */}
-          <path d="M15 18l-6-6 6-6" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      </button>
+      {!sessionShutdownVisible && (
+        <button
+          onClick={() => setSessionShutdownVisible(true)}
+          aria-label="Cerrar sesión"
+          title="Cerrar sesión"
+          style={{
+            position: 'absolute',
+            top: 12,
+            left: 12,
+            background: 'transparent',
+            border: 'none',
+            cursor: 'pointer',
+            width: 28,
+            height: 28,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 0,
+            filter: 'drop-shadow(0 0 6px rgba(255, 107, 107, 0.7))',
+          }}
+        >
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#FF6B6B" strokeWidth="1.8">
+            {/* Marco cuadrado (puerta) */}
+            <rect x="3" y="4" width="18" height="16" rx="2" ry="2" />
+            {/* Símbolo de salida (X dentro de un círculo) */}
+            <path d="M15 18l-6-6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
+      )}
       {/* Botón Configuración — Engranaje del Sistema */}
       <button
         onClick={() => setModal('profile')}
@@ -971,6 +982,14 @@ function HUD() {
           )}
         </div>
       </EpicModalFrame>
+    )}
+    {sessionShutdownVisible && (
+      <SessionShutdown 
+        onComplete={() => {
+          setSessionShutdownVisible(false);
+          signOut();
+        }} 
+      />
     )}
   </div>
 </div>
