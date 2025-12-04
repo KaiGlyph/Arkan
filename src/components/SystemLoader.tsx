@@ -1,6 +1,6 @@
 // src/components/SystemLoader.tsx
 import { useEffect, useState, memo } from 'react';
-import { EPIC_THEME } from '../constants';
+import { EPIC_THEME } from '../constants/constants';
 
 const SystemLoader = memo(({ onReady }: { onReady: () => void }) => {
   const [lines, setLines] = useState<string[]>([]);

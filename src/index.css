@@ -27,6 +27,20 @@ body {
   box-sizing: border-box;
 }
 
+/* ---------------------------------------------- */
+/* 🔹 TEXTO DEL TÍTULO – solo visible en escritorio */
+/* ---------------------------------------------- */
+.title-desktop-only {
+  display: none;
+}
+
+/* Cuando sea Desktop */
+@media (min-width: 600px) {
+  .title-desktop-only {
+    display: block;
+  }
+}
+
 /* Para pantallas móviles: ocupar todo el ancho */
 @media (max-width: 768px) {
   #root {
@@ -38,6 +52,11 @@ body {
   body {
     overflow-y: auto;
   }
+
+  /* IMPORTANTE: aquí estaba mal escrito "hiden" */
+  .title-desktop-only {
+    display: none;
+  }
 }
 
 /* ===== Ajuste específico para el login ===== */
@@ -46,15 +65,14 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: transparent; /* ✅ Elimina el fondo extra */
+  background: transparent;
   color: white;
   padding: 16px;
 }
 
-/* ✅ En escritorio, centra el formulario visualmente */
+/* Desktop */
 @media (min-width: 769px) {
   .login-container {
-    /* Hacemos que el contenedor sea un flex que centre el contenido */
     display: flex;
     justify-content: center;
     align-items: center;
@@ -63,12 +81,12 @@ body {
 
   .login-container > div {
     width: 100%;
-    max-width: 380px; /* el formulario sigue siendo compacto */
-    margin: 0 auto; /* ⚠️ Esto ya no es necesario si usamos flex */
-    /* Pero lo dejamos por compatibilidad */
+    max-width: 380px;
+    margin: 0 auto;
   }
 }
 
+/* Mobile */
 @media (max-width: 768px) {
   .login-container {
     align-items: flex-start;
@@ -79,5 +97,60 @@ body {
   .login-container > div {
     width: 100%;
     max-width: 100%;
+  }
+}
+
+/* ====================================================== */
+/* 🔥🔥 ESTILOS DE LAS MONEDAS (coin-box) AÑADIDOS ABAJO 🔥🔥 */
+/* ====================================================== */
+
+/* Base genérica */
+.coin-box {
+  transition: width 150ms ease, height 150ms ease, box-shadow 150ms ease;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  overflow: hidden;
+  border-radius: 8px;
+}
+
+/* Desktop: tamaños máximos */
+@media (min-width: 600px) {
+  .coin-box {
+    width: 110px;
+    height: 36px;
+    gap: 8px;
+    padding: 0 12px;
+  }
+}
+
+/* Móvil: cajas más estrechas */
+@media (max-width: 599px) {
+  .coin-box {
+    width: 86px;
+    height: 32px;
+    gap: 6px;
+    padding: 0 8px;
+    border-radius: 6px;
+    box-shadow: 0 0 4px rgba(0, 0, 0, 0.25);
+  }
+
+  .coin-box img {
+    width: 16px !important;
+    height: 16px !important;
+  }
+
+  .coin-box span {
+    font-size: 13px !important;
+  }
+}
+
+/* ====================================================== */
+/*                          Tienda                        */
+/* ====================================================== */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-20px);
   }
 }

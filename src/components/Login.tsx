@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { EPIC_THEME } from '../constants';
+import { EPIC_THEME } from '../constants/constants';
 
 // 🔹 Iconos SVG personalizados (estilo Sistema)
 const EyeClosedIcon = () => (
@@ -119,6 +119,20 @@ export default function Login() {
               filter: 'drop-shadow(0 0 10px rgba(177, 140, 255, 0.5))' 
             }} 
           />
+          <span
+            className="title-desktop-only"
+            style={{
+              fontWeight: "bold",
+              fontSize: "clamp(20px, 5vw, 28px)",
+              letterSpacing: "clamp(1px, 0.5vw, 2px)",
+              fontFamily: EPIC_THEME.typography.heading,
+              color: EPIC_THEME.colors.accentLight,
+              textShadow: `0 0 8px ${EPIC_THEME.colors.accentGlow}, 
+                          0 0 16px rgba(177, 140, 255, 0.3)`,
+            }}
+          >
+            ARKAN PROTOCOL
+          </span>
         </div>
 
         <h1 style={{

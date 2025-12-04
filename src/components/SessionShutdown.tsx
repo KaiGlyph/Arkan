@@ -1,6 +1,6 @@
 // src/components/SessionShutdown.tsx
 import { useEffect, useState, memo } from 'react';
-import { EPIC_THEME } from '../constants';
+import { EPIC_THEME } from '../constants/constants';
 
 const SessionShutdown = memo(({ onComplete }: { onComplete: () => void }) => {
   const [lines, setLines] = useState<string[]>([]);

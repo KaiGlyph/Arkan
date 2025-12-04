@@ -1,4 +1,6 @@
 import { useEffect, useState, memo } from 'react';
+import SystemLoader from '../components/SystemLoader';
+import SessionShutdown from '../components/SessionShutdown';
 import { useHabits } from '../hooks/useHabits';
 import { useAuth } from '../context/AuthContext';
 import { 
@@ -11,10 +13,9 @@ import {
   RARITY_NAMES,
   TITLE_RARITY_COLORS,
   TITLE_RARITY_NAMES,
-} from '../constants';
-import type { StatName} from '../types';
-import SystemLoader from '../components/SystemLoader';
-import SessionShutdown from '../components/SessionShutdown';
+} from '../constants/constants';
+import type { ItemRarity, StatName} from '../types';
+import { useShop } from '../hooks/useShop';
 
 
 // ✅ Contenedor de tarjeta estable
@@ -132,7 +133,7 @@ const ProfileModal = memo(function ProfileModal({
   initial: { name: string; age: number; title: string; bio: string };
   onClose: () => void;
   onSave: (v: { name: string; age: number; title: string; bio: string }) => void;
-  stats: { streak: number; successRate: number };
+  stats: { streak: number; successRate: number; fractal: number; xyn: number };
   titles: { id: string; name: string }[];
 }) {
   const [local, setLocal] = useState(initial);
@@ -143,7 +144,7 @@ const ProfileModal = memo(function ProfileModal({
       <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
         <div style={{ 
           display: 'grid', 
-          gridTemplateColumns: '1fr 1fr', 
+          gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', 
           gap: 12, 
           marginBottom: 12,
           padding: '16px',
@@ -151,19 +152,39 @@ const ProfileModal = memo(function ProfileModal({
           border: `1px solid ${EPIC_THEME.colors.accent}`,
           borderRadius: 8
         }}>
+          {/* Racha */}
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: 'clamp(12px, 2.4vw, 14px)', opacity: 0.7, marginBottom: 4, fontFamily: EPIC_THEME.typography.subtitle }}>RACHA</div>
-            <div style={{ fontSize: 'clamp(24px, 5vw, 32px)', fontWeight: 'bold', color: EPIC_THEME.colors.accent, fontFamily: EPIC_THEME.typography.heading }}>
+            <div style={{ fontSize: 'clamp(11px, 2.2vw, 12px)', opacity: 0.7, marginBottom: 4, fontFamily: EPIC_THEME.typography.subtitle }}>RACHA</div>
+            <div style={{ fontSize: 'clamp(20px, 4.5vw, 24px)', fontWeight: 'bold', color: EPIC_THEME.colors.accent, fontFamily: EPIC_THEME.typography.heading }}>
               {stats.streak}
             </div>
-            <div style={{ fontSize: 'clamp(11px, 2.2vw, 12px)', opacity: 0.6, fontFamily: EPIC_THEME.typography.subtitle }}>días consecutivos</div>
+            <div style={{ fontSize: 'clamp(10px, 2vw, 11px)', opacity: 0.6, fontFamily: EPIC_THEME.typography.subtitle }}>días</div>
           </div>
+          {/* Tasa Cumplimiento */}
           <div style={{ textAlign: 'center' }}>
             <div style={{ fontSize: 'clamp(12px, 2.4vw, 14px)', opacity: 0.7, marginBottom: 4, fontFamily: EPIC_THEME.typography.subtitle }}>ÉXITO</div>
             <div style={{ fontSize: 'clamp(24px, 5vw, 32px)', fontWeight: 'bold', color: stats.successRate >= 80 ? '#4CAF50' : stats.successRate >= 50 ? '#FF9800' : '#FF5252', fontFamily: EPIC_THEME.typography.heading }}>
               {stats.successRate}%
             </div>
             <div style={{ fontSize: 'clamp(11px, 2.2vw, 12px)', opacity: 0.6, fontFamily: EPIC_THEME.typography.subtitle }}>tasa de cumplimiento</div>
+          </div>
+          
+          {/* Fractal */}
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 'clamp(11px, 2.2vw, 12px)', opacity: 0.7, marginBottom: 4, fontFamily: EPIC_THEME.typography.subtitle }}>FRACTAL</div>
+            <div style={{ fontSize: 'clamp(20px, 4.5vw, 24px)', fontWeight: 'bold', color: '#64B5F6', fontFamily: EPIC_THEME.typography.heading }}>
+              {stats.fractal}
+            </div>
+            <div style={{ fontSize: 'clamp(10px, 2vw, 11px)', opacity: 0.6, fontFamily: EPIC_THEME.typography.subtitle }}>TRGL</div>
+          </div>
+          
+          {/* Xyn */}
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 'clamp(11px, 2.2vw, 12px)', opacity: 0.7, marginBottom: 4, fontFamily: EPIC_THEME.typography.subtitle }}>Xyn</div>
+            <div style={{ fontSize: 'clamp(20px, 4.5vw, 24px)', fontWeight: 'bold', color: '#FFD700', fontFamily: EPIC_THEME.typography.heading, textShadow: '0 0 8px rgba(255, 215, 0, 0.7)' }}>
+              {stats.xyn}
+            </div>
+            <div style={{ fontSize: 'clamp(10px, 2vw, 11px)', opacity: 0.6, fontFamily: EPIC_THEME.typography.subtitle }}>XYN</div>
           </div>
         </div>
         <div>
@@ -251,15 +272,48 @@ function HUD() {
     currentStreak, successRate,
     inventory, useItem,
     titles, activeTitle, setActiveTitle,
+    fractal,
+    xyn, 
   } = useHabits();
 
-  const [modal, setModal] = useState<null | 'missions' | 'inventory' | 'titles' | 'pets' | 'profile' | 'mailbox'>(null);
+  const [modal, setModal] = useState<null | 'missions' | 'inventory' | 'titles' | 'pets' | 'profile' | 'shop' | 'mailbox'>(null);
   const [sessionShutdownVisible, setSessionShutdownVisible] = useState(false);
   const [assigningPoints, setAssigningPoints] = useState<{ rewardId: string; points: number } | null>(null);
   const [pointAssignment, setPointAssignment] = useState<Partial<Record<StatName, number>>>({});
-  const [inventoryFilter, setInventoryFilter] = useState<'all' | 'consumible' | 'especial'>('all');
+
+
+  type InventoryFilter = {
+    category: 'all' | 'consumible' | 'especial';
+    rarity: 'all' | ItemRarity;
+  };
+  const [inventoryFilter, setInventoryFilter] = useState<InventoryFilter>({ 
+    category: 'all',
+    rarity: 'all' 
+  });
+
   const [selectedItem, setSelectedItem] = useState<string | null>(null);
-  const [modalFilter, setModalFilter] = useState<'all' | 'inicial' | 'racha' | 'nivel' | 'especial' | 'legendario'>('all');
+  type ModalFilter = 'all' | 'comun' | 'raro' | 'epico' | 'legendario';
+  const [_modalFilter, _setModalFilter] = useState<ModalFilter>('all');
+  
+  const [titleFilter, setTitleFilter] = useState<'all' | 'inicial' | 'racha' | 'nivel' | 'especial' | 'legendario'>('all');
+  const shop = useShop();
+  type ShopFilter = {
+    currency: 'all' | 'fractal' | 'xyn';
+    type: 'all' | 'item' | 'title';
+    rarity: 'all' | ItemRarity;
+  };
+
+  const [shopFilter, setShopFilter] = useState<ShopFilter>({ 
+    currency: 'all', 
+    type: 'all',
+    rarity: 'all',
+  });
+  const [selectedShopItem, setSelectedShopItem] = useState<string | null>(null);
+  const [purchaseStatus, setPurchaseStatus] = useState<{ show: boolean; message: string; success: boolean }>({ 
+    show: false, 
+    message: '', 
+    success: false 
+  });
 
   // ✅ Notificaciones
   useEffect(() => {
@@ -371,57 +425,145 @@ function HUD() {
     maxWidth: '1200px',
     margin: '6px auto',
   }}>
-    {/* Header */}
-    <div style={{ textAlign: 'center', marginBottom: 20, position: 'relative' }}>
-      <div style={{ 
-        width: 'clamp(60px, 15vw, 80px)', 
-        height: 'clamp(60px, 15vw, 10px)', 
-        margin: '0 auto 12px', 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'center', 
-        position: 'relative' 
-      }}>
-        <img src="/Arkan-Logo.png" alt="Arkan Protocol" style={{ width: '70%', height: 'auto', filter: 'drop-shadow(0 0 10px rgba(177, 140, 255, 0.5))', zIndex: 2 }} />
-      </div>
-      <div style={{ fontWeight: 'bold', fontSize: 'clamp(22px, 6vw, 28px)', letterSpacing: 'clamp(1px, 0.5vw, 2px)', fontFamily: EPIC_THEME.typography.heading, color: EPIC_THEME.colors.accentLight, textShadow: `0 0 8px ${EPIC_THEME.colors.accentGlow}, 0 0 16px rgba(177, 140, 255, 0.3)` }}>ARKAN PROTOCOL</div>
+  {/* Header */}
+  <div
+    style={{
+      width: "100%",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginBottom: 20,
+      padding: "0 6px",
+    }}
+  >
+    {/* 🔹 Zona Izquierda */}
+    <div
+      style={{
+        width: "40px",
+        height: "40px",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        position: "relative",
+      }}
+    >
+    
     </div>
+
+    {/* 🔸 Zona Derecha: Monedas con tamaño responsivo (clamp) y mejor alineado */}
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: "10px",
+        justifyContent: "flex-end",
+      }}
+    >
+      {/* Fractales */}
+      <div
+        className="coin-box"
+        style={{
+          width: "clamp(86px, 24vw, 110px)",
+          height: "clamp(32px, 6.8vw, 36px)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "flex-start",
+          gap: "clamp(6px, 1.5vw, 8px)",
+          padding: "0 10px",
+          borderRadius: "8px",
+          background: "linear-gradient(180deg, rgba(100,80,200,0.14), rgba(100,80,200,0.08))",
+          border: "1px solid rgba(177,140,255,0.28)",
+          boxShadow: "0 0 6px rgba(177,140,255,0.28)",
+          overflow: "hidden",
+        }}
+      >
+        <img src="/icon-fractal.png" style={{ width: "18px", height: "18px", flex: "0 0 auto" }} />
+        <span
+          style={{
+            marginLeft: 6,
+            fontSize: "clamp(13px, 3.2vw, 15px)",
+            fontWeight: 600,
+            color: EPIC_THEME.colors.accentLight,
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            textAlign: "right",
+            flex: 1,
+          }}
+        >
+          {fractal}
+        </span>
+      </div>
+      {/* Xyn */}
+      <div
+        className="coin-box"
+        style={{
+          // fallback inline styles (keeps sane defaults if CSS not loaded)
+          width: "clamp(86px, 24vw, 110px)",
+          height: "clamp(32px, 6.8vw, 36px)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "flex-start",
+          gap: "clamp(6px, 1.5vw, 8px)",
+          padding: "0 10px",
+          borderRadius: "8px",
+          background: "linear-gradient(180deg, rgba(240,210,80,0.14), rgba(240,210,80,0.08))",
+          border: "1px solid rgba(240,210,80,0.28)",
+          boxShadow: "0 0 6px rgba(240,210,80,0.28)",
+          overflow: "hidden",
+        }}
+      >
+        <img src="/icon-xyn.png" style={{ width: "18px", height: "18px", flex: "0 0 auto" }} />
+        <span
+          style={{
+            marginLeft: 6,
+            fontSize: "clamp(13px, 3.2vw, 15px)",
+            fontWeight: 600,
+            color: "#f5e1a0",
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            textAlign: "right",
+            flex: 1,
+          }}
+        >
+          {xyn}
+        </span>
+      </div>
+  </div>
+</div>
+
+
     {/* Perfil */}
     <EpicCard style={{ 
       marginBottom: 20, 
       textAlign: 'center', 
       position: 'relative'
     }}>
-      {/* Botón Cerrar sesión — Portal de Salida */}
-      {!sessionShutdownVisible && (
-        <button
-          onClick={() => setSessionShutdownVisible(true)}
-          aria-label="Cerrar sesión"
-          title="Cerrar sesión"
-          style={{
-            position: 'absolute',
-            top: 12,
-            left: 12,
-            background: 'transparent',
-            border: 'none',
-            cursor: 'pointer',
-            width: 28,
-            height: 28,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: 0,
-            filter: 'drop-shadow(0 0 6px rgba(255, 107, 107, 0.7))',
-          }}
-        >
-          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#FF6B6B" strokeWidth="1.8">
-            {/* Marco cuadrado (puerta) */}
-            <rect x="3" y="4" width="18" height="16" rx="2" ry="2" />
-            {/* Símbolo de salida (X dentro de un círculo) */}
-            <path d="M15 18l-6-6 6-6" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </button>
-      )}
+        {!sessionShutdownVisible && (
+      <button
+        onClick={() => setSessionShutdownVisible(true)}
+        aria-label="Cerrar sesión"
+        title="Cerrar sesión"
+        style={{
+          background: "transparent",
+          border: "none",
+          cursor: "pointer",
+          width: 28,
+          height: 28,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: 0,
+          filter: "drop-shadow(0 0 6px rgba(255, 107, 107, 0.7))",
+        }}
+      >
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#FF6B6B" strokeWidth="1.8">
+          <rect x="3" y="4" width="18" height="16" rx="2" ry="2" />
+          <path d="M15 18l-6-6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
+    )}
       {/* Botón Configuración — Engranaje del Sistema */}
       <button
         onClick={() => setModal('profile')}
@@ -533,8 +675,9 @@ function HUD() {
     }}>
       {[
         { key: 'missions', label: 'MISIONES' },
-        { key: 'inventory', label: 'INVENTARIO' },
         { key: 'titles', label: 'TÍTULOS' },
+        { key: 'inventory', label: 'INVENTARIO' },
+        { key: 'shop', label: 'TIENDA' },
         { key: 'pets', label: 'MASCOTAS' },
         { key: 'mailbox', label: 'BUZÓN', badge: pendingRewards.length > 0 ? pendingRewards.length : undefined },
       ].map(btn => {
@@ -569,12 +712,13 @@ function HUD() {
     {modal === 'profile' && (
       <ProfileModal
         initial={{ name, age, title: activeTitle || '', bio: bio || '' }}
-        stats={{ streak: currentStreak, successRate }}
+        stats={{ streak: currentStreak, successRate, fractal, xyn }}
         onClose={() => setModal(null)}
         onSave={handleSaveProfile}
         titles={unlockedTitleOptions}
       />
     )}
+
     {/* Modal Misiones */}
     {modal === 'missions' && (
       <EpicModalFrame title="MISIONES DIARIAS" onClose={() => setModal(null)}>
@@ -626,6 +770,7 @@ function HUD() {
         </div>
       </EpicModalFrame>
     )}
+
     {/* Modal Buzón */}
     {modal === 'mailbox' && (
       <EpicModalFrame title="BUZÓN" onClose={() => { setModal(null); setAssigningPoints(null); setPointAssignment({}); }}>
@@ -687,28 +832,95 @@ function HUD() {
         </div>
       </EpicModalFrame>
     )}
+
     {/* Modal Inventario */}
     {modal === 'inventory' && (
       <EpicModalFrame title="INVENTARIO" onClose={() => { setModal(null); setSelectedItem(null); }}>
-        <div style={{ display: 'flex', gap: 8, marginBottom: 20, justifyContent: 'center', flexWrap: 'wrap' }}>
-          {(['all', 'consumible', 'especial'] as const).map(filter => (
-            <EpicButton
-              key={filter}
-              onClick={() => setInventoryFilter(filter)}
-              variant={inventoryFilter === filter ? 'primary' : 'secondary'}
-              style={{ padding: '8px 16px', fontSize: 'clamp(13px, 2.6vw, 14px)' }}
+        {/* 🔧 Filtros: Categoría | Rareza */}
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', 
+          gap: 10, 
+          marginBottom: 24,
+          padding: '0 12px'
+        }}>
+          {/* Categoría */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <label style={{ 
+              fontSize: 'clamp(12px, 2.4vw, 13px)', 
+              opacity: 0.8, 
+              fontFamily: EPIC_THEME.typography.subtitle 
+            }}>Categoría</label>
+            <select
+              value={inventoryFilter.category}
+              onChange={e => setInventoryFilter(f => ({ ...f, category: e.target.value as any }))}
+              style={{
+                padding: '10px 14px',
+                backgroundColor: 'rgba(15, 10, 25, 0.9)',
+                border: `2px solid ${EPIC_THEME.colors.accent}`,
+                borderRadius: 0,
+                color: 'white',
+                fontSize: 'clamp(14px, 2.8vw, 15px)',
+                fontFamily: EPIC_THEME.typography.body,
+                appearance: 'none',
+                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%23B18CFF' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`,
+                backgroundRepeat: 'no-repeat',
+                backgroundPosition: 'right 10px center',
+                paddingRight: 30,
+              }}
             >
-              {filter === 'all' ? 'TODO' : filter === 'consumible' ? 'CONSUMIBLES' : 'ESPECIALES'}
-            </EpicButton>
-          ))}
+              <option value="all">Todas</option>
+              <option value="consumible">Consumibles</option>
+              <option value="especial">Especiales</option>
+            </select>
+          </div>
+
+          {/* Rareza */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <label style={{ 
+              fontSize: 'clamp(12px, 2.4vw, 13px)', 
+              opacity: 0.8,
+              fontFamily: EPIC_THEME.typography.subtitle 
+            }}>Rareza</label>
+            <select
+              value={inventoryFilter.rarity}
+              onChange={e => setInventoryFilter(f => ({ ...f, rarity: e.target.value as ItemRarity }))}
+              style={{
+                padding: '10px 14px',
+                backgroundColor: 'rgba(15, 10, 25, 0.9)',
+                border: `2px solid ${EPIC_THEME.colors.accent}`,
+                borderRadius: 0,
+                color: 'white',
+                fontSize: 'clamp(14px, 2.8vw, 15px)',
+                fontFamily: EPIC_THEME.typography.body,
+                appearance: 'none',
+                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%23B18CFF' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`,
+                backgroundRepeat: 'no-repeat',
+                backgroundPosition: 'right 10px center',
+                paddingRight: 30,
+              }}
+            >
+              <option value="all">Todas</option>
+              <option value="normal">Normal</option>
+              <option value="raro">Raro</option>
+              <option value="elite">Elite</option>
+              <option value="legendario">Legendario</option>
+            </select>
+          </div>
         </div>
+
+        {/* Grid de ítems */}
         <div style={{ 
           display: 'grid', 
           gridTemplateColumns: 'repeat(auto-fill, minmax(clamp(120px, 30vw, 160px), 1fr))', 
           gap: 14 
         }}>
           {inventory
-            .filter(item => inventoryFilter === 'all' || item.category === inventoryFilter)
+            .filter(item => {
+              const matchesCategory = inventoryFilter.category === 'all' || item.category === inventoryFilter.category;
+              const matchesRarity = inventoryFilter.rarity === 'all' || item.rarity === inventoryFilter.rarity;
+              return matchesCategory && matchesRarity;
+            })
             .map(item => (
               <EpicCard
                 key={item.id}
@@ -751,11 +963,29 @@ function HUD() {
               </EpicCard>
             ))}
         </div>
-        {inventory.filter(item => inventoryFilter === 'all' || item.category === inventoryFilter).length === 0 && (
-          <div style={{ textAlign: 'center', padding: '60px 16px', color: EPIC_THEME.colors.accentLight, fontSize: 'clamp(16px, 3.6vw, 18px)', opacity: 0.7, fontFamily: EPIC_THEME.typography.subtitle }}>
-            Tu inventario está vacío.<br />Completa misiones para obtener recompensas.
-          </div>
-        )}
+
+        {/* Mensaje vacío */}
+        {inventory
+          .filter(item => {
+            const matchesCategory = inventoryFilter.category === 'all' || item.category === inventoryFilter.category;
+            const matchesRarity = inventoryFilter.rarity === 'all' || item.rarity === inventoryFilter.rarity;
+            return matchesCategory && matchesRarity;
+          })
+          .length === 0 && (
+            <div style={{ 
+              textAlign: 'center', 
+              padding: '60px 16px', 
+              color: EPIC_THEME.colors.accentLight, 
+              fontSize: 'clamp(16px, 3.6vw, 18px)', 
+              opacity: 0.7, 
+              fontFamily: EPIC_THEME.typography.subtitle 
+            }}>
+              Tu inventario está vacío<br />
+              o no hay ítems que coincidan con los filtros.
+            </div>
+          )}
+
+        {/* Modal de detalle de ítem — sin cambios */}
         {selectedItem && (() => {
           const item = inventory.find(i => i.id === selectedItem);
           if (!item) return null;
@@ -822,167 +1052,636 @@ function HUD() {
         })()}
       </EpicModalFrame>
     )}
-    {/* ✅ MODAL DE TÍTULOS — integrado y corregido */}
-    {modal === 'titles' && (
-      <EpicModalFrame title="TÍTULOS" onClose={() => setModal(null)}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-          {/* Filtros */}
-          <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap' }}>
-            {(['all', 'inicial', 'racha', 'nivel', 'especial', 'legendario'] as const).map(filter => (
-              <EpicButton
-                key={filter}
-                onClick={() => setModalFilter(filter)}
-                variant={modalFilter === filter ? 'primary' : 'secondary'}
-                style={{ padding: '8px 16px', fontSize: 'clamp(13px, 2.6vw, 14px)' }}
-              >
-                {filter === 'all' ? 'TODO' : 
-                filter === 'inicial' ? 'INICIALES' :
-                filter === 'racha' ? 'RACHA' :
-                filter === 'nivel' ? 'NIVEL' :
-                filter === 'especial' ? 'ESPECIALES' :
-                'LEGENDARIOS'}
-              </EpicButton>
-            ))}
-          </div>
-          {/* Grid de títulos */}
+
+    {/* Modal Tienda */}
+    {modal === 'shop' && (
+      <EpicModalFrame title="TIENDA ARKAN" onClose={() => { 
+        setModal(null); 
+        setSelectedShopItem(null); 
+        setPurchaseStatus({ show: false, message: '', success: false });
+      }}>
+        {/* Notificación de compra */}
+        {purchaseStatus.show && (
           <div style={{ 
-            display: 'grid', 
-            gridTemplateColumns: 'repeat(auto-fill, minmax(clamp(140px, 35vw, 180px), 1fr))', 
-            gap: 16 
+            position: 'fixed', 
+            top: 20, 
+            left: '50%', 
+            transform: 'translateX(-50%)', 
+            zIndex: 2000,
+            padding: '16px 24px',
+            backgroundColor: purchaseStatus.success ? 'rgba(76, 175, 80, 0.95)' : 'rgba(244, 67, 54, 0.95)',
+            border: `2px solid ${purchaseStatus.success ? '#4CAF50' : '#F44336'}`,
+            borderRadius: 8,
+            boxShadow: `0 0 30px ${purchaseStatus.success ? 'rgba(76, 175, 80, 0.6)' : 'rgba(244, 67, 54, 0.6)'}`,
+            animation: 'fadeIn 0.3s ease',
           }}>
-            {titles
-              .filter(t => modalFilter === 'all' || t.category === modalFilter)
-              .map(title => {
-                const isActive = activeTitle === title.id;
-                const rarityColor = TITLE_RARITY_COLORS[title.rarity];
-                return (
-                  <EpicCard
-                    key={title.id}
-                    style={{
-                      padding: '16px 12px',
-                      border: `2px solid ${isActive ? '#FFD700' : title.unlocked ? rarityColor : '#444'}`,
-                      boxShadow: `0 0 20px ${isActive ? 'rgba(255, 215, 0, 0.4)' : title.unlocked ? `${rarityColor}40` : 'rgba(68,68,68,0.2)'}`,
-                      opacity: !title.unlocked ? 0.6 : 1,
-                      cursor: title.unlocked ? 'pointer' : 'not-allowed',
-                      position: 'relative',
-                    }}
-                    onClick={() => title.unlocked && setActiveTitle(isActive ? null : title.id)}
-                  >
-                    {/* Icono */}
-                    <div style={{
-                      fontSize: 'clamp(28px, 7vw, 36px)',
-                      textAlign: 'center',
-                      marginBottom: 8,
-                      textShadow: `0 0 8px ${rarityColor}`
-                    }}>
-                      {title.icon}
-                    </div>
-                    {/* Nombre */}
-                    <div style={{
-                      textAlign: 'center',
-                      fontWeight: 'bold',
-                      fontSize: 'clamp(14px, 3vw, 16px)',
-                      color: rarityColor,
-                      fontFamily: EPIC_THEME.typography.heading,
-                      marginBottom: 4,
-                      letterSpacing: 0.5,
-                    }}>
-                      {title.name}
-                    </div>
-                    {/* Rareza */}
-                    <div style={{
-                      textAlign: 'center',
-                      fontSize: 'clamp(10px, 2.2vw, 11px)',
-                      opacity: 0.7,
-                      marginBottom: 8,
-                      fontFamily: EPIC_THEME.typography.subtitle,
-                    }}>
-                      {TITLE_RARITY_NAMES[title.rarity]}
-                    </div>
-                    {/* Requisito */}
-                    <div style={{
-                      fontSize: 'clamp(11px, 2.4vw, 12px)',
-                      opacity: 0.85,
-                      marginBottom: 8,
-                      lineHeight: 1.4,
-                      fontFamily: EPIC_THEME.typography.body,
-                    }}>
-                      {title.requirement.description}
-                    </div>
-                    {/* Bonus */}
-                    <div style={{
-                      fontSize: 'clamp(12px, 2.5vw, 13px)',
-                      fontWeight: 'bold',
-                      color: EPIC_THEME.colors.accent,
-                      fontFamily: EPIC_THEME.typography.subtitle,
-                      textAlign: 'center',
-                      marginTop: 'auto',
-                      paddingTop: 8,
-                      borderTop: title.unlocked ? `1px solid ${rarityColor}30` : 'none',
-                    }}>
-                      {title.bonus.description || 'Sin bonus'}
-                    </div>
-                    {/* Locked overlay */}
-                    {!title.unlocked && (
-                      <div style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        background: 'rgba(0,0,0,0.7)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        borderRadius: 0,
-                        zIndex: 2,
-                      }}>
-                        <div style={{
-                          color: '#888',
-                          fontSize: 'clamp(14px, 3vw, 16px)',
-                          fontWeight: 'bold',
-                          textAlign: 'center',
-                          fontFamily: EPIC_THEME.typography.heading,
-                        }}>
-                        </div>
-                      </div>
-                    )}
-                    {/* Badge activo */}
-                    {isActive && (
-                      <div style={{
-                        position: 'absolute',
-                        top: 8,
-                        right: 8,
-                        backgroundColor: '#FFD700',
-                        color: '#0F071A',
-                        borderRadius: '50%',
-                        width: 22,
-                        height: 22,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: 12,
-                        fontWeight: 'bold',
-                        boxShadow: '0 0 8px rgba(255,215,0,0.8)',
-                        zIndex: 3,
-                      }}>
-                        ★
-                      </div>
-                    )}
-                  </EpicCard>
-                );
-              })}
-          </div>
-          {titles.filter(t => modalFilter === 'all' || t.category === modalFilter).length === 0 && (
-            <div style={{ textAlign: 'center', padding: '60px 16px', color: EPIC_THEME.colors.accentLight, fontSize: 'clamp(16px, 3.6vw, 18px)', opacity: 0.7, fontFamily: EPIC_THEME.typography.subtitle }}>
-              {modalFilter === 'all' 
-                ? 'No tienes títulos aún. ¡Completa misiones y sube de nivel!' 
-                : `Sin títulos en la categoría "${modalFilter}".`}
+            <div style={{ 
+              fontSize: 'clamp(14px, 2.8vw, 16px)', 
+              fontWeight: 'bold', 
+              color: 'white',
+              textAlign: 'center',
+              fontFamily: EPIC_THEME.typography.heading 
+            }}>
+              {purchaseStatus.message}
             </div>
-          )}
+          </div>
+        )}
+
+        {/* Balance */}
+        <div style={{ 
+          display: 'flex', 
+          gap: 16, 
+          marginBottom: 24, 
+          padding: 16,
+          backgroundColor: 'rgba(177, 140, 255, 0.05)',
+          border: `1px solid ${EPIC_THEME.colors.accent}`,
+          borderRadius: 8
+        }}>
+          <div style={{ flex: 1, textAlign: 'center' }}>
+            <div style={{ fontSize: 'clamp(11px, 2.2vw, 12px)', opacity: 0.7, marginBottom: 4 }}>FRACTAL</div>
+            <div style={{ 
+              fontSize: 'clamp(20px, 4.5vw, 24px)', 
+              fontWeight: 'bold', 
+              color: '#64B5F6',
+              fontFamily: EPIC_THEME.typography.heading 
+            }}>
+              {shop.fractal}
+            </div>
+          </div>
+          <div style={{ flex: 1, textAlign: 'center' }}>
+            <div style={{ fontSize: 'clamp(11px, 2.2vw, 12px)', opacity: 0.7, marginBottom: 4 }}>XYN</div>
+            <div style={{ 
+              fontSize: 'clamp(20px, 4.5vw, 24px)', 
+              fontWeight: 'bold', 
+              color: '#FFD700',
+              fontFamily: EPIC_THEME.typography.heading,
+              textShadow: '0 0 8px rgba(255, 215, 0, 0.7)'
+            }}>
+              {shop.xyn}
+            </div>
+          </div>
         </div>
+
+      {/* 🔧 Filtros: Moneda | Tipo | Rareza */}
+      <div style={{ 
+        display: 'grid', 
+        gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', 
+        gap: 10, 
+        marginBottom: 24,
+        padding: '0 12px'
+      }}>
+        {/* Moneda */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <label style={{ 
+            fontSize: 'clamp(12px, 2.4vw, 13px)', 
+            opacity: 0.8, 
+            fontFamily: EPIC_THEME.typography.subtitle 
+          }}>Moneda</label>
+          <select
+            value={shopFilter.currency}
+            onChange={e => setShopFilter(f => ({ ...f, currency: e.target.value as any }))}
+            style={{
+              padding: '10px 14px',
+              backgroundColor: 'rgba(15, 10, 25, 0.9)',
+              border: `2px solid ${EPIC_THEME.colors.accent}`,
+              borderRadius: 0,
+              color: 'white',
+              fontSize: 'clamp(14px, 2.8vw, 15px)',
+              fontFamily: EPIC_THEME.typography.body,
+              appearance: 'none',
+              backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%23B18CFF' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`,
+              backgroundRepeat: 'no-repeat',
+              backgroundPosition: 'right 10px center',
+              paddingRight: 30,
+            }}
+          >
+            <option value="all">Todas</option>
+            <option value="fractal">Fractal</option>
+            <option value="xyn">Xyn</option>
+          </select>
+        </div>
+
+        {/* Tipo */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <label style={{ 
+            fontSize: 'clamp(12px, 2.4vw, 13px)', 
+            opacity: 0.8,
+            fontFamily: EPIC_THEME.typography.subtitle 
+          }}>Tipo</label>
+          <select
+            value={shopFilter.type}
+            onChange={e => setShopFilter(f => ({ ...f, type: e.target.value as any }))}
+            style={{
+              padding: '10px 14px',
+              backgroundColor: 'rgba(15, 10, 25, 0.9)',
+              border: `2px solid ${EPIC_THEME.colors.accent}`,
+              borderRadius: 0,
+              color: 'white',
+              fontSize: 'clamp(14px, 2.8vw, 15px)',
+              fontFamily: EPIC_THEME.typography.body,
+              appearance: 'none',
+              backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%23B18CFF' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`,
+              backgroundRepeat: 'no-repeat',
+              backgroundPosition: 'right 10px center',
+              paddingRight: 30,
+            }}
+          >
+            <option value="all">Todos</option>
+            <option value="item">Ítems</option>
+            <option value="title">Títulos</option>
+          </select>
+        </div>
+
+          {/* Rareza */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <label style={{ 
+              fontSize: 'clamp(12px, 2.4vw, 13px)', 
+              opacity: 0.8,
+              fontFamily: EPIC_THEME.typography.subtitle 
+            }}>Rareza</label>
+            <select
+              value={shopFilter.rarity}
+              onChange={e => setShopFilter(f => ({ ...f, rarity: e.target.value as any }))}
+              style={{
+                padding: '10px 14px',
+                backgroundColor: 'rgba(15, 10, 25, 0.9)',
+                border: `2px solid ${EPIC_THEME.colors.accent}`,
+                borderRadius: 0,
+                color: 'white',
+                fontSize: 'clamp(14px, 2.8vw, 15px)',
+                fontFamily: EPIC_THEME.typography.body,
+                appearance: 'none',
+                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%23B18CFF' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`,
+                backgroundRepeat: 'no-repeat',
+                backgroundPosition: 'right 10px center',
+                paddingRight: 30,
+              }}
+            >
+              <option value="all">Todas</option>
+              <option value="normal">Normal</option>
+              <option value="raro">Raro</option>
+              <option value="elite">Elite</option>
+              <option value="legendario">Legendario</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Grid de ítems */}
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(auto-fill, minmax(clamp(160px, 40vw, 200px), 1fr))', 
+          gap: 16 
+        }}>
+        {shop.catalog
+          .filter(item => {
+            // Filtro por moneda
+            const matchesCurrency = shopFilter.currency === 'all' || 
+                                    item.currency === shopFilter.currency;
+            // Filtro por tipo
+            const itemType = item.effect.type === 'unlock_title' ? 'title' : 'item';
+            const matchesType = shopFilter.type === 'all' || shopFilter.type === itemType;
+            // Filtro por rareza
+            const matchesRarity = shopFilter.rarity === 'all' || item.rarity === shopFilter.rarity;
+
+            return matchesCurrency && matchesType && matchesRarity;
+          })
+          .map(item => {
+              const canBuy = shop.canAfford(item);
+              const currencyColor = item.currency === 'fractal' ? '#64B5F6' : '#FFD700';
+              
+              return (
+                <EpicCard
+                  key={item.id}
+                  onClick={() => canBuy && setSelectedShopItem(item.id)}
+                  style={{
+                    padding: '16px',
+                    cursor: canBuy ? 'pointer' : 'not-allowed',
+                    opacity: canBuy ? 1 : 0.5,
+                    border: `2px solid ${RARITY_COLORS[item.rarity]}`,
+                    boxShadow: `0 0 20px ${RARITY_COLORS[item.rarity]}40`,
+                    transition: 'all 0.2s ease',
+                  }}
+                >
+                  <div style={{ textAlign: 'center', marginBottom: 12 }}>
+                    <div style={{ 
+                      fontSize: 'clamp(15px, 3.4vw, 18px)', 
+                      fontWeight: 'bold', 
+                      color: RARITY_COLORS[item.rarity],
+                      fontFamily: EPIC_THEME.typography.heading,
+                      marginBottom: 4
+                    }}>
+                      {item.name}
+                    </div>
+                    <div style={{ 
+                      fontSize: 'clamp(10px, 2vw, 11px)', 
+                      opacity: 0.7,
+                      marginBottom: 8
+                    }}>
+                      {RARITY_NAMES[item.rarity]}
+                    </div>
+                  </div>
+
+                  <div style={{ 
+                    fontSize: 'clamp(12px, 2.4vw, 13px)', 
+                    lineHeight: 1.5, 
+                    marginBottom: 12,
+                    minHeight: 60,
+                    opacity: 0.9
+                  }}>
+                    {item.description}
+                  </div>
+
+                  <div style={{ 
+                    padding: '10px 14px',
+                    backgroundColor: canBuy ? `${currencyColor}20` : 'rgba(120, 120, 120, 0.2)',
+                    border: `2px solid ${canBuy ? currencyColor : '#666'}`,
+                    borderRadius: 8,
+                    textAlign: 'center'
+                  }}>
+                    <div style={{ 
+                      fontSize: 'clamp(18px, 4vw, 22px)', 
+                      fontWeight: 'bold',
+                      color: canBuy ? currencyColor : '#888',
+                      fontFamily: EPIC_THEME.typography.heading
+                    }}>
+                      {item.price} {item.currency === 'fractal' ? 'FRACTAL' : 'XYN'}
+                    </div>
+                  </div>
+
+                  {!canBuy && (
+                    <div style={{ 
+                      marginTop: 8, 
+                      fontSize: 'clamp(11px, 2.2vw, 12px)', 
+                      color: '#FF5252',
+                      textAlign: 'center',
+                      fontWeight: 'bold'
+                    }}>
+                      Fondos insuficientes
+                    </div>
+                  )}
+                </EpicCard>
+              );
+            })}
+        </div>
+
+        {shop.catalog.filter(item => {
+          const matchesCurrency = shopFilter.currency === 'all' || item.currency === shopFilter.currency;
+          const matchesType = shopFilter.type === 'all' ||
+            (shopFilter.type === 'item' && item.effect.type === 'give_item') ||
+            (shopFilter.type === 'title' && item.effect.type === 'unlock_title');
+          return matchesCurrency && matchesType;
+        }).length === 0 && (
+          <div style={{ 
+            textAlign: 'center', 
+            padding: '60px 16px', 
+            color: EPIC_THEME.colors.accentLight, 
+            fontSize: 'clamp(16px, 3.6vw, 18px)', 
+            opacity: 0.7 
+          }}>
+            No hay ítems disponibles en esta categoría.
+          </div>
+        )}
+
+        {/* Modal de confirmación */}
+        {selectedShopItem && (() => {
+          const item = shop.catalog.find(i => i.id === selectedShopItem);
+          if (!item) return null;
+          
+          return (
+            <div style={{
+              position: 'fixed', 
+              top: 0, 
+              left: 0, 
+              width: '100%', 
+              height: '100%',
+              backgroundColor: 'rgba(5, 2, 12, 0.95)', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              zIndex: 1002, 
+              backdropFilter: 'blur(12px)'
+            }} onClick={() => setSelectedShopItem(null)}>
+              <div onClick={(e) => e.stopPropagation()} style={{ width: 'min(90%, 420px)', margin: '0 12px' }}>
+                <EpicCard style={{ 
+                  border: `2px solid ${RARITY_COLORS[item.rarity]}`, 
+                  boxShadow: `0 0 40px ${RARITY_COLORS[item.rarity]}60` 
+                }}>
+                  <div style={{ textAlign: 'center', marginBottom: 20 }}>
+                    <div style={{ 
+                      fontSize: 'clamp(20px, 4.8vw, 26px)', 
+                      fontWeight: 'bold', 
+                      color: RARITY_COLORS[item.rarity],
+                      fontFamily: EPIC_THEME.typography.heading,
+                      marginBottom: 8
+                    }}>
+                      {item.name}
+                    </div>
+                    <div style={{ 
+                      fontSize: 'clamp(12px, 2.4vw, 14px)', 
+                      opacity: 0.7,
+                      marginBottom: 12
+                    }}>
+                      {RARITY_NAMES[item.rarity]}
+                    </div>
+                  </div>
+
+                  <div style={{ 
+                    fontSize: 'clamp(14px, 2.8vw, 16px)', 
+                    lineHeight: 1.6, 
+                    marginBottom: 20,
+                    opacity: 0.9
+                  }}>
+                    {item.description}
+                  </div>
+
+                  <div style={{ 
+                    padding: '16px',
+                    backgroundColor: 'rgba(177, 140, 255, 0.05)',
+                    border: `1px solid ${EPIC_THEME.colors.accent}`,
+                    borderRadius: 8,
+                    marginBottom: 20
+                  }}>
+                    <div style={{ 
+                      fontSize: 'clamp(13px, 2.6vw, 15px)', 
+                      opacity: 0.7, 
+                      marginBottom: 8,
+                      textAlign: 'center'
+                    }}>
+                      PRECIO
+                    </div>
+                    <div style={{ 
+                      fontSize: 'clamp(26px, 6vw, 32px)', 
+                      fontWeight: 'bold',
+                      color: item.currency === 'fractal' ? '#64B5F6' : '#FFD700',
+                      fontFamily: EPIC_THEME.typography.heading,
+                      textAlign: 'center',
+                      textShadow: item.currency === 'xyn' ? '0 0 10px rgba(255, 215, 0, 0.6)' : 'none'
+                    }}>
+                      {item.price} {item.currency === 'fractal' ? 'TRGL' : 'XYN'}
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: 12 }}>
+                    <button
+                      onClick={() => {
+                        const result = shop.buyItem(item.id);
+                        setPurchaseStatus({
+                          show: true,
+                          message: result.message || (result.success ? '¡Compra exitosa!' : 'Error en la compra'),
+                          success: result.success
+                        });
+                        setSelectedShopItem(null);
+                        setTimeout(() => {
+                          setPurchaseStatus({ show: false, message: '', success: false });
+                        }, 3000);
+                      }}
+                      disabled={!shop.canAfford(item)}
+                      style={{
+                        flex: 1,
+                        padding: '14px',
+                        fontSize: 'clamp(16px, 3.5vw, 18px)',
+                        fontWeight: 'bold',
+                        fontFamily: EPIC_THEME.typography.heading,
+                        letterSpacing: '0.5px',
+                        textAlign: 'center',
+                        backgroundColor: shop.canAfford(item)
+                          ? 'linear-gradient(135deg, #8A2BE2, #9370DB)' // Gradiente púrpura
+                          : 'rgba(100, 100, 120, 0.5)',
+                        color: shop.canAfford(item) ? '#FFFFFF' : '#AAAAAA',
+                        border: `2px solid ${shop.canAfford(item) ? '#9370DB' : '#555'}`,
+                        borderRadius: 0,
+                        boxShadow: shop.canAfford(item)
+                          ? '0 0 15px rgba(147, 112, 219, 0.6), inset 0 0 10px rgba(147, 112, 219, 0.3)'
+                          : 'none',
+                        cursor: shop.canAfford(item) ? 'pointer' : 'not-allowed',
+                        transition: 'all 0.3s ease',
+                        textShadow: shop.canAfford(item) ? '0 0 8px rgba(255, 255, 255, 0.8)' : 'none',
+                        position: 'relative',
+                        overflow: 'hidden',
+                        // ✅ Efecto hover
+                        ...(shop.canAfford(item) && {
+                          ':hover': {
+                            transform: 'scale(1.02)',
+                            boxShadow: '0 0 25px rgba(147, 112, 219, 0.8), inset 0 0 15px rgba(147, 112, 219, 0.5)',
+                            filter: 'brightness(1.1)',
+                          },
+                        }),
+                        // ✅ Efecto de pulsado
+                        ...(shop.canAfford(item) && {
+                          ':active': {
+                            transform: 'scale(0.98)',
+                            boxShadow: '0 0 10px rgba(147, 112, 219, 0.5), inset 0 0 5px rgba(147, 112, 219, 0.3)',
+                          },
+                        }),
+                      }}
+                    >
+                      {shop.canAfford(item) ? 'COMPRAR' : 'FONDOS INSUFICIENTES'}
+                    </button>
+                  </div>
+                </EpicCard>
+              </div>
+            </div>
+          );
+        })()}
       </EpicModalFrame>
     )}
+
+{/* Modal Títulos */}
+{modal === 'titles' && (
+  <EpicModalFrame title="TÍTULOS" onClose={() => setModal(null)}>
+    {/* Filtros */}
+    <div style={{ 
+      display: 'grid', 
+      gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', 
+      gap: 10, 
+      marginBottom: 24,
+      padding: '0 12px'
+    }}>
+      {/* Categoría */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <label style={{ 
+          fontSize: 'clamp(12px, 2.4vw, 13px)', 
+          opacity: 0.8, 
+          fontFamily: EPIC_THEME.typography.subtitle 
+        }}>Categoría</label>
+        <select
+          value={titleFilter}
+          onChange={e => setTitleFilter(e.target.value as any)}
+          style={{
+            padding: '10px 14px',
+            backgroundColor: 'rgba(15, 10, 25, 0.9)',
+            border: `2px solid ${EPIC_THEME.colors.accent}`,
+            borderRadius: 0,
+            color: 'white',
+            fontSize: 'clamp(14px, 2.8vw, 15px)',
+            fontFamily: EPIC_THEME.typography.body,
+            appearance: 'none',
+            backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%23B18CFF' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`,
+            backgroundRepeat: 'no-repeat',
+            backgroundPosition: 'right 10px center',
+            paddingRight: 30,
+          }}
+        >
+          <option value="all">Todas</option>
+          <option value="inicial">Inicial</option>
+          <option value="racha">Racha</option>
+          <option value="nivel">Nivel</option>
+          <option value="especial">Especial</option>
+          <option value="legendario">Legendario</option>
+        </select>
+      </div>
+    </div>
+
+    {/* Grid de títulos */}
+    <div style={{ 
+      display: 'grid', 
+      gridTemplateColumns: 'repeat(auto-fill, minmax(clamp(140px, 35vw, 180px), 1fr))', 
+      gap: 16 
+    }}>
+      {titles
+        .filter(title => titleFilter === 'all' || title.category === titleFilter)
+        .map(title => {
+          const isActive = activeTitle === title.id;
+          const rarityColor = TITLE_RARITY_COLORS[title.rarity];
+          return (
+            <EpicCard
+              key={title.id}
+              style={{
+                padding: '16px 12px',
+                border: `2px solid ${isActive ? '#FFD700' : title.unlocked ? rarityColor : '#444'}`,
+                boxShadow: `0 0 20px ${isActive ? 'rgba(255, 215, 0, 0.4)' : title.unlocked ? `${rarityColor}40` : 'rgba(68,68,68,0.2)'}`,
+                opacity: !title.unlocked ? 0.6 : 1,
+                cursor: title.unlocked ? 'pointer' : 'not-allowed',
+                position: 'relative',
+              }}
+              onClick={() => title.unlocked && setActiveTitle(isActive ? null : title.id)}
+            >
+              {/* Icono */}
+              <div style={{
+                fontSize: 'clamp(28px, 7vw, 36px)',
+                textAlign: 'center',
+                marginBottom: 8,
+                textShadow: `0 0 8px ${rarityColor}`
+              }}>
+                {title.icon}
+              </div>
+              {/* Nombre */}
+              <div style={{
+                textAlign: 'center',
+                fontWeight: 'bold',
+                fontSize: 'clamp(14px, 3vw, 16px)',
+                color: rarityColor,
+                fontFamily: EPIC_THEME.typography.heading,
+                marginBottom: 4,
+                letterSpacing: 0.5,
+              }}>
+                {title.name}
+              </div>
+              {/* Rareza */}
+              <div style={{
+                textAlign: 'center',
+                fontSize: 'clamp(10px, 2.2vw, 11px)',
+                opacity: 0.7,
+                marginBottom: 8,
+                fontFamily: EPIC_THEME.typography.subtitle,
+              }}>
+                {TITLE_RARITY_NAMES[title.rarity]}
+              </div>
+              {/* Requisito */}
+              <div style={{
+                fontSize: 'clamp(11px, 2.4vw, 12px)',
+                opacity: 0.85,
+                marginBottom: 8,
+                lineHeight: 1.4,
+                fontFamily: EPIC_THEME.typography.body,
+              }}>
+                {title.requirement.description}
+              </div>
+              {/* Bonus */}
+              <div style={{
+                fontSize: 'clamp(12px, 2.5vw, 13px)',
+                fontWeight: 'bold',
+                color: EPIC_THEME.colors.accent,
+                fontFamily: EPIC_THEME.typography.subtitle,
+                textAlign: 'center',
+                marginTop: 'auto',
+                paddingTop: 8,
+                borderTop: title.unlocked ? `1px solid ${rarityColor}30` : 'none',
+              }}>
+                {title.bonus.description || 'Sin bonus'}
+              </div>
+              {/* Locked overlay */}
+              {!title.unlocked && (
+                <div style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  background: 'rgba(0,0,0,0.7)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: 0,
+                  zIndex: 2,
+                }}>
+                  <div style={{
+                    color: '#888',
+                    fontSize: 'clamp(14px, 3vw, 16px)',
+                    fontWeight: 'bold',
+                    textAlign: 'center',
+                    fontFamily: EPIC_THEME.typography.heading,
+                  }}>
+                  </div>
+                </div>
+              )}
+              {/* Badge activo */}
+              {isActive && (
+                <div style={{
+                  position: 'absolute',
+                  top: 8,
+                  right: 8,
+                  backgroundColor: '#FFD700',
+                  color: '#0F071A',
+                  borderRadius: '50%',
+                  width: 22,
+                  height: 22,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: 12,
+                  fontWeight: 'bold',
+                  boxShadow: '0 0 8px rgba(255,215,0,0.8)',
+                  zIndex: 3,
+                }}>
+                  ★
+                </div>
+              )}
+            </EpicCard>
+          );
+        })}
+    </div>
+
+    {/* Mensaje vacío */}
+    {titles.filter(title => titleFilter === 'all' || title.category === titleFilter).length === 0 && (
+      <div style={{ 
+        textAlign: 'center', 
+        padding: '60px 16px', 
+        color: EPIC_THEME.colors.accentLight, 
+        fontSize: 'clamp(16px, 3.6vw, 18px)', 
+        opacity: 0.7, 
+        fontFamily: EPIC_THEME.typography.subtitle 
+      }}>
+        {titleFilter === 'all'
+          ? 'No tienes títulos aún. ¡Completa misiones y sube de nivel!'
+          : `No hay títulos en la categoría "${titleFilter}".`
+        }
+      </div>
+    )}
+  </EpicModalFrame>
+)}
+
+    {/* Modal de cierre de sesión */}
     {sessionShutdownVisible && (
       <SessionShutdown 
         onComplete={() => {
@@ -991,6 +1690,7 @@ function HUD() {
         }} 
       />
     )}
+
   </div>
 </div>
   );

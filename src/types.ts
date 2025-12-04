@@ -17,15 +17,16 @@ export interface Habit {
   frequency: HabitFrequency;
   streak: number;
   lastCompleted: string | null;
+  completedCount?: number; // ✅ Añadido para contar cuántas veces se ha completado
 }
 
 export interface Reward {
   id: string;
-  type: 'levelUp' | 'dailyMissions' | 'quest';
+  type: 'levelUp' | 'dailyMissions' | 'dailyCompletion' | 'quest'; // ✅ Añadido 'dailyCompletion'
   description: string;
   stats: Partial<Record<StatName, number>> & { points?: number };
   createdAt: string;
-  claimedAt?: string;
+  claimedAt?: string | null; // ✅ Cambiado a permitir null
 }
 
 export interface InventoryItem {
@@ -67,6 +68,20 @@ export interface Title {
   unlockedAt?: string;
 }
 
+export interface CatalogItem {
+  readonly name: string;
+  readonly description: string;
+  readonly category: ItemCategory;
+  readonly rarity: ItemRarity;
+  readonly effect: {
+    readonly type: 'xp_boost' | 'shield_penalty' | 'time_rewind' | 'duplicate_reward' | 'reroll_missions' | 'streak_protection';
+    readonly value?: number;
+    readonly description: string;
+  };
+  readonly consumable: boolean;
+  readonly unique?: boolean;
+}
+
 export interface UserState {
   totalXP: number;
   habits: Habit[];
@@ -86,4 +101,7 @@ export interface UserState {
   unclaimedRewards: Reward[];
   titles: Title[];
   activeTitle: string | null;
+  streakShieldUses?: number;
+  fractal: number;
+  xyn: number;
 }

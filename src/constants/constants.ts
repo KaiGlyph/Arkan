@@ -8,7 +8,7 @@ import type {
   ItemCategory,
   Title,
   TitleRarity
-} from './types';
+} from '../types';
 
 // 📊 XP por dificultad
 export const XP_BY_DIFFICULTY: Record<HabitDifficulty, number> = {
@@ -475,6 +475,25 @@ export const CATEGORY_COLORS: Record<HabitCategory, string> = {
   mind: '#6C5CE7',
   productivity: '#FFA502',
   discipline: '#9C27B0',
+} as const;
+
+// 💰 Economía: Fractal (moneda de juego)
+export const INITIAL_FRACTAL = 150;
+export const FRACTAL_BY_DIFFICULTY: Record<HabitDifficulty, number> = {
+  easy: 5,
+  medium: 15,
+  hard: 25,
+} as const;
+
+// 💎 Xyn (moneda premium real)
+export const INITIAL_XYN = 0; // solo se modifica con compra real (por ahora 0)
+
+// 💰 Precios en Fractal
+export const ITEM_PRICES: Record<ItemRarity, number> = {
+  normal: 50,
+  raro: 150,
+  elite: 350,
+  legendario: 800,
 } as const;
 
 // 🎨 Tema visual épico
