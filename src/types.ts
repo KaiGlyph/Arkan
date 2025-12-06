@@ -9,6 +9,7 @@ export type ItemCategory = 'consumible' | 'especial' | 'equipamiento' | 'herrami
 export type TitleRarity = 'comun' | 'raro' | 'epico' | 'legendario';
 export type TitleCategory = 'inicial' | 'racha' | 'nivel' | 'especial' | 'legendario';
 
+{/* Misiones */}
 export interface Habit {
   id: string;
   name: string;
@@ -17,18 +18,21 @@ export interface Habit {
   frequency: HabitFrequency;
   streak: number;
   lastCompleted: string | null;
-  completedCount?: number; // ✅ Añadido para contar cuántas veces se ha completado
+  completedCount?: number; 
 }
 
+{/* Recompensas */}
 export interface Reward {
   id: string;
-  type: 'levelUp' | 'dailyMissions' | 'dailyCompletion' | 'quest'; // ✅ Añadido 'dailyCompletion'
+  type: 'levelUp' | 'dailyMissions' | 'dailyCompletion' | 'quest';
   description: string;
   stats: Partial<Record<StatName, number>> & { points?: number };
   createdAt: string;
-  claimedAt?: string | null; // ✅ Cambiado a permitir null
+  claimedAt?: string | null; 
 }
+export type StatReward = Reward;
 
+{/* Inventario */}
 export interface InventoryItem {
   id: string;
   name: string;
@@ -46,6 +50,7 @@ export interface InventoryItem {
   dateAcquired: string;
 }
 
+{/* Titulos */}
 export interface Title {
   id: string;
   name: string;
@@ -68,6 +73,7 @@ export interface Title {
   unlockedAt?: string;
 }
 
+{/* Items */}
 export interface CatalogItem {
   readonly name: string;
   readonly description: string;
@@ -82,6 +88,8 @@ export interface CatalogItem {
   readonly unique?: boolean;
 }
 
+
+{/* Usuario */}
 export interface UserState {
   totalXP: number;
   habits: Habit[];
